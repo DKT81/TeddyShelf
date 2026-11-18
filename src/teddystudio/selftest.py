@@ -130,6 +130,10 @@ def run(directory):
                 worker.cancel_all()
                 worker.thread.join(20)
         window = MainWindow(settings, store)
+        from . import __version__
+
+        assert window.version_label.text() == f"V {__version__}"
+        report["version"] = __version__
         window.show()
         window.collection.cards.setCurrentRow(0)
         window.collection.cards.item(0).setSelected(True)

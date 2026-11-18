@@ -79,6 +79,8 @@ Jeder Auftrag speichert Metadaten, Profil und Einstellungen. Beim Start erfolgt 
 
 Unter **Einstellungen → Allgemein** sind 1 bis 16 gleichzeitige Aufträge einstellbar, Standard 1. Lokale Vorbereitung und Konvertierung können parallel laufen; Übertragungen und Modelländerungen bleiben je TeddyCloud-Ziel nacheinander. Fertige Aufträge bleiben standardmäßig sichtbar. Geänderte Quellen werden erkannt; dafür einen neuen Auftrag anlegen. Protokolle und Verlauf lassen sich als JSON exportieren. Bestätigte Importaufträge können mit „Ergebnis erneut prüfen“ ohne Serveränderungen geprüft werden.
 
+Beim Schließen während laufender Aufträge lässt sich zwischen **Aufträge abbrechen und beenden** und **Programm weiter ausführen** wählen. Nach bestätigtem Abbruch schließt die Anwendung automatisch, sobald Konverter beendet und temporäre Audiodaten bereinigt sind. Die Programmversion steht dauerhaft rechts unten in der Statusleiste.
+
 ## Namen und Metadaten
 
 Profile steuern Modellkennung, sichtbaren Titel, Serie, Episodentext, Sprache, Kategorie, Dateinamen und Zielordner. Variablen werden in der Oberfläche erklärt und live geprüft. Folge, Track und Split-Teil sind getrennt. ASCII-Pfade werden erzwungen, reservierte Windows-Namen und Pfadnavigation abgewiesen. Beispiele: `bibi-tina-001`, `library/Bibi-Tina`, `custom_img/Bibi-Tina`. Unbekannte Folgen werden anhand eines Titelslugs benannt. Übertragungen ändern keine RFID-Zuordnung automatisch.

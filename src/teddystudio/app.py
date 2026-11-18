@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 )
 
 from .client import TeddyCloud
+from . import __version__
 from .domain import Book
 from .jobs import Worker, exclusive_lock
 from .storage import Store, Settings, data_directory
@@ -61,6 +62,11 @@ class MainWindow(QMainWindow):
         clean_inactive(data_directory() / "work")
         self.bridge = Bridge()
         self.worker = Worker(self.store, self.bridge.changed.emit, self.settings)
+        self._closing_when_idle = False
+        self._close_prompt_open = False
+        self._shutdown_timer = QTimer(self)
+        self._shutdown_timer.setInterval(100)
+        self._shutdown_timer.timeout.connect(self._finish_shutdown)
         root = QWidget()
         self.setCentralWidget(root)
         layout = QHBoxLayout(root)
@@ -174,6 +180,10 @@ class MainWindow(QMainWindow):
         self.collection.selected.connect(self.settings_page.set_preview_book)
         self.bridge.changed.connect(self.jobs_changed)
         self.statusBar().showMessage("Bereit · Quell-Audios bleiben erhalten")
+        self.version_label = QLabel(f"V {__version__}")
+        self.version_label.setObjectName("applicationVersion")
+        self.version_label.setToolTip(f"TeddyStudio · Version {__version__}")
+        self.statusBar().addPermanentWidget(self.version_label)
         self.apply_theme()
         if self.settings.show_unfinished and any(
             j["status"] in {"Wartet", "Unterbrochen"} for j in self.store.jobs()
@@ -409,15 +419,8 @@ class MainWindow(QMainWindow):
                     self.store.save_book(book)
         self.collection.refresh_cards()
 
-    def closeEvent(self, event):
-        if self.worker.running:
-            self.worker.pause.set()
-            self.statusBar().showMessage(
-                "Nach dem aktuellen Titel pausiert. Danach kann die Anwendung geschlossen werden."
-            )
-            event.ignore()
-            return
-        if any(
+    def _background_busy(self):
+        return any(
             getattr(page, "_tasks", [])
             for page in [
                 self.collection,
@@ -428,7 +431,58 @@ class MainWindow(QMainWindow):
                 self.settings_page,
                 self,
             ]
-        ):
+        )
+
+    def _finish_shutdown(self):
+        """Keep Qt responsive while workers reap their converters and clean PCM."""
+        if self.worker.running or self._background_busy():
+            return
+        self._shutdown_timer.stop()
+        self.close()
+
+    def closeEvent(self, event):
+        if self._close_prompt_open:
+            event.ignore()
+            return
+        if self.worker.running and not self._closing_when_idle:
+            self._close_prompt_open = True
+            try:
+                dialog = QMessageBox(self)
+                dialog.setWindowTitle("Laufende Aufträge abbrechen?")
+                dialog.setIcon(QMessageBox.Icon.Warning)
+                dialog.setText("Es werden noch Aufträge verarbeitet.")
+                dialog.setInformativeText(
+                    "Beim Beenden werden die Warteschlange und laufende Konverter abgebrochen. "
+                    "Temporäre Audiodaten werden bereinigt. Bereits gespeicherte Dateien "
+                    "und TeddyCloud-Inhalte bleiben erhalten."
+                )
+                abort = dialog.addButton(
+                    "Aufträge abbrechen und beenden",
+                    QMessageBox.ButtonRole.DestructiveRole,
+                )
+                keep = dialog.addButton(
+                    "Programm weiter ausführen", QMessageBox.ButtonRole.RejectRole
+                )
+                dialog.setDefaultButton(keep)
+                dialog.setEscapeButton(keep)
+                dialog.exec()
+                confirmed = dialog.clickedButton() == abort
+            finally:
+                self._close_prompt_open = False
+            if not confirmed:
+                event.ignore()
+                return
+            self._closing_when_idle = True
+            self.centralWidget().setEnabled(False)
+            self.worker.cancel_all()
+        if self._closing_when_idle and (self.worker.running or self._background_busy()):
+            self.statusBar().showMessage(
+                "Aufträge werden abgebrochen und Arbeitsdateien bereinigt. Die Anwendung schließt anschließend automatisch."
+            )
+            self._shutdown_timer.start()
+            event.ignore()
+            return
+        if self._background_busy():
             self.statusBar().showMessage("Bitte den laufenden Vorgang abwarten.")
             event.ignore()
             return
@@ -444,6 +498,7 @@ def main():
         return run(sys.argv[2])
     app = QApplication(sys.argv)
     app.setApplicationName("TeddyStudio")
+    app.setApplicationVersion(__version__)
     app.setOrganizationName("TeddyStudio")
     try:
         with exclusive_lock(data_directory() / "application.lock"):

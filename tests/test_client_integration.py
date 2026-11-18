@@ -266,6 +266,67 @@ def test_verified_import_without_cover_and_second_run_has_no_writes(
         execute("Import", payload, tmp_path / "work", lambda *_: None)
 
 
+def test_window_close_cancels_job_blocked_in_http(
+    app, server, sample, tmp_path, monkeypatch
+):
+    import time
+    from PySide6.QtCore import QTimer
+    from PySide6.QtWidgets import QApplication, QMessageBox
+    from teddystudio.app import MainWindow
+    from teddystudio.storage import Store
+
+    monkeypatch.setenv("TEDDYSTUDIO_DATA", str(tmp_path / "data"))
+    url, state = server
+    settings = Settings(url=url)
+    book = Book(
+        "close",
+        str(sample.parent),
+        "Shutdown test",
+        "Demo",
+        1,
+        tracks=[Track(str(sample), duration=4.2)],
+    )
+    payload = {
+        "book": book.to_dict(),
+        "settings": asdict(settings),
+        "profile": asdict(settings.profile()),
+    }
+    store = Store(tmp_path / "library.sqlite")
+    identifier = store.add_job("Import", payload)
+    window = MainWindow(settings, store)
+    window.show()
+    state["hold_models"] = True
+    window.worker.start()
+    try:
+        assert state["models_entered"].wait(15)
+
+        def confirm():
+            dialog = QApplication.activeModalWidget()
+            assert isinstance(dialog, QMessageBox)
+            next(
+                b
+                for b in dialog.buttons()
+                if b.text() == "Aufträge abbrechen und beenden"
+            ).click()
+
+        QTimer.singleShot(0, confirm)
+        started = time.monotonic()
+        window.close()
+        deadline = started + 10
+        while window.isVisible() and time.monotonic() < deadline:
+            app.processEvents()
+            time.sleep(0.02)
+        assert not window.isVisible() and not window.worker.running
+        assert store.jobs()[0]["status"] == "Abgebrochen"
+        assert not list((tmp_path / "data" / "work" / identifier).rglob("*.pcm"))
+    finally:
+        state["models_release"].set()
+        window.worker.cancel_all()
+        if window.worker.thread:
+            window.worker.thread.join(20)
+        window.close()
+
+
 def test_model_rejection_includes_server_validation_message(server):
     import requests
 

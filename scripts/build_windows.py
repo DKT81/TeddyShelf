@@ -76,7 +76,7 @@ def main():
     subprocess.run(command, cwd=ROOT, env=environment, check=True)
     folder = ROOT / "dist" / "TeddyStudio"
     shutil.copy2(ROOT / "README.md", folder)
-    archive = ROOT / "dist" / "TeddyStudio-0.4.2-Windows-x64.zip"
+    archive = ROOT / "dist" / "TeddyStudio-0.4.3-Windows-x64.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as output:
         for path in folder.rglob("*"):
             if path.is_file():
