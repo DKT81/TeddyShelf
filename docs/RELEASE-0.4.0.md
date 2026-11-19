@@ -1,4 +1,4 @@
-# TeddyStudio 0.4.0
+# TeddyShelf 0.4.0
 
 - PCM-Arbeitsaudio wird nach jedem Verarbeitungsversuch entfernt, auch nach Fehler, Pause und Abbruch. Altbestände in inaktiven Arbeitsordnern werden beim Start bereinigt. Eine manuelle Bereinigung steht unter Einstellungen → Protokolle bereit. Quellen und fertige Exporte bleiben erhalten.
 - Die Sammlung nennt die Aktion jetzt „In TeddyCloud übertragen“.

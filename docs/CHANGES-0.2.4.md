@@ -1,8 +1,8 @@
-# TeddyStudio 0.2.4
+# TeddyShelf 0.2.4
 
 ## Modell wird von neuerer TeddyCloud-Validierung abgewiesen
 
-Die offizielle Modell-API verlangt das Feld `no` als Zeichenkette. TeddyStudio sendete bisher eine JSON-Zahl, beispielsweise `8`; neuere Server lehnen diesen Wert mit HTTP 400 ab. Der Client sendet nun `"8"`, beziehungsweise `"0"` für Titel ohne Folgennummer. Die Audio-ID und die Folgennummer bleiben getrennte Werte.
+Die offizielle Modell-API verlangt das Feld `no` als Zeichenkette. TeddyShelf sendete bisher eine JSON-Zahl, beispielsweise `8`; neuere Server lehnen diesen Wert mit HTTP 400 ab. Der Client sendet nun `"8"`, beziehungsweise `"0"` für Titel ohne Folgennummer. Die Audio-ID und die Folgennummer bleiben getrennte Werte.
 
 Quelle: [offizielle API-Validierung](https://github.com/toniebox-reverse-engineering/teddycloud/blob/master/src/handler_api.c), Funktion `validateToniesCustomJson`.
 

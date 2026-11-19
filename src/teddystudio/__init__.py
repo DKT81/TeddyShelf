@@ -1,3 +1,3 @@
-"""TeddyStudio: local-first audiobook tools. Never assigns RFID tags."""
+"""TeddyShelf: local audiobook tools and verified TeddyCloud transfers."""
 
-__version__ = "0.4.3"
+__version__ = "0.5.0"

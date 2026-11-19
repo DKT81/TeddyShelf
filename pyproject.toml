@@ -3,14 +3,15 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "teddystudio"
-version = "0.4.3"
+name = "teddyshelf"
+version = "0.5.0"
 license = "GPL-3.0-or-later"
 description = "Windows audiobook library, audio editor and verified TeddyCloud importer"
 requires-python = ">=3.11"
 dependencies = ["PySide6-Addons>=6.8,<7", "mutagen>=1.47,<2", "Pillow>=11,<14", "requests>=2.32,<3"]
 
 [project.scripts]
+teddyshelf = "teddystudio.app:main"
 teddystudio = "teddystudio.app:main"
 
 [tool.setuptools.packages.find]

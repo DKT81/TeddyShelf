@@ -1,4 +1,4 @@
-# TeddyStudio 0.3.0
+# TeddyShelf 0.3.0
 
 ## Ganze Warteschlange steuern
 

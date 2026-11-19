@@ -1,4 +1,4 @@
-# TeddyStudio 0.2.2
+# TeddyShelf 0.2.2
 
 ## Textfelder und Details
 

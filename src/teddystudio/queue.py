@@ -94,7 +94,7 @@ class Worker:
             if self.running:
                 return
             self.thread = threading.Thread(
-                target=self._run, name="TeddyStudio-queue", daemon=False
+                target=self._run, name="TeddyShelf-queue", daemon=False
             )
             self.thread.start()
 

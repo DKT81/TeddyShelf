@@ -1,6 +1,6 @@
 # Untersuchung: Inhalte von TeddyCloud lokal sichern
 
-Stand: 17.11.2026. Ergebnis: technisch möglich. Eine eigene Download-Verwaltung in TeddyStudio ist in diesem Änderungsschritt noch nicht implementiert.
+Stand: 17.11.2026. Ergebnis: technisch möglich. Eine eigene Download-Verwaltung in TeddyShelf ist in diesem Änderungsschritt noch nicht implementiert.
 
 ## Verfügbare Inhalte
 
@@ -14,7 +14,7 @@ Andere Tonies sind ebenfalls lokal sicherbar, wenn ihre Audiodatei bereits in Te
 - `/api/fileIndexV2?path=…`: Inhaltsablage; konfigurierte Overlays müssen bei einer späteren vollständigen Inventarisierung berücksichtigt werden.
 - `/content/<relativer-pfad>?special=library`: vorhandene Bibliotheksdatei als TAF inklusive Header lesen. Ohne `special=library` adressiert derselbe Handler die Inhaltsablage.
 - `ogg=true` am lokalen Content-Handler überspringt den 4096-Byte-TAF-Header und liefert den Ogg/Opus-Inhalt. Eine erneute verlustbehaftete Konvertierung ist dafür nicht erforderlich.
-- Neuere Versionen besitzen `tracks` für serverseitigen Kapitelexport. Verfügbarkeit und genaue Parameter müssen pro Serverversion geprüft werden; alternativ kann TeddyStudio nach Download lokal dekodieren und exportieren.
+- Neuere Versionen besitzen `tracks` für serverseitigen Kapitelexport. Verfügbarkeit und genaue Parameter müssen pro Serverversion geprüft werden; alternativ kann TeddyShelf nach Download lokal dekodieren und exportieren.
 
 **Nicht als allgemeinen Sicherungsabruf verwenden:** `/content/download/…` kann anhand einer Tag-Konfiguration einen Abruf aus der offiziellen Toniecloud auslösen. Diese Untersuchung löste einen solchen Abruf nicht aus. Die geplante Sicherung betrifft bereits auf TeddyCloud vorhandene Dateien, ohne Konto-/Authentifizierungsdaten zu ändern oder Zugriffsbeschränkungen zu umgehen.
 

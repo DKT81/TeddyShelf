@@ -1,4 +1,4 @@
-# TeddyStudio 0.2.3
+# TeddyShelf 0.2.3
 
 ## Reihenfolge nur bei Änderungen oder Unklarheiten bestätigen
 

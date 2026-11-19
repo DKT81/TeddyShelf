@@ -25,7 +25,7 @@ def main():
         "--windowed",
         "--onedir",
         "--name",
-        "TeddyStudio",
+        "TeddyShelf",
         "--paths",
         str(ROOT / "src"),
         "--add-data",
@@ -74,13 +74,13 @@ def main():
         ]
     )
     subprocess.run(command, cwd=ROOT, env=environment, check=True)
-    folder = ROOT / "dist" / "TeddyStudio"
+    folder = ROOT / "dist" / "TeddyShelf"
     shutil.copy2(ROOT / "README.md", folder)
-    archive = ROOT / "dist" / "TeddyStudio-0.4.3-Windows-x64.zip"
+    archive = ROOT / "dist" / "TeddyShelf-0.5.0-Windows-x64.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as output:
         for path in folder.rglob("*"):
             if path.is_file():
-                output.write(path, Path("TeddyStudio") / path.relative_to(folder))
+                output.write(path, Path("TeddyShelf") / path.relative_to(folder))
     with zipfile.ZipFile(archive) as output:
         assert output.testzip() is None
     with archive.open("rb") as stream:

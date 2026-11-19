@@ -557,7 +557,7 @@ class SettingsPage(QWidget):
         path, _ = QFileDialog.getSaveFileName(
             self,
             "Einstellungen exportieren",
-            "TeddyStudio-Profil.json",
+            "TeddyShelf-Profil.json",
             "JSON (*.json)",
         )
         if path:

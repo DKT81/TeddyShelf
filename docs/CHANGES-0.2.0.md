@@ -1,4 +1,4 @@
-# TeddyStudio 0.2.0
+# TeddyShelf 0.2.0
 
 ## Sammlung
 

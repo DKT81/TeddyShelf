@@ -1,4 +1,4 @@
-# TeddyStudio 0.2.1
+# TeddyShelf 0.2.1
 
 - Gemeinsame Aktionsleisten halten Buttons links zusammen. Bei kleiner Breite brechen reine Buttonleisten um; Buttons wachsen nicht mehr in der Höhe. Das betrifft Sammlung, Cover, Audio und weitere Ansichten.
 - Listenzeilen sind kompakter. Coverkarten behalten ihre eigene Gestaltung. Die Cover-Titelliste und das Vorschaubild sind durch eine verschiebbare Bereichsgrenze getrennt.

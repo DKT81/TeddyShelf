@@ -1,4 +1,4 @@
-# TeddyStudio 0.3.1
+# TeddyShelf 0.3.1
 
 Enthält alle Änderungen aus [0.3.0](CHANGES-0.3.0.md): globale Warteschlangensteuerung, einstellbare parallele Prozesse, sichtbare fertige Aufträge und Cloud-Statusfilter.
 

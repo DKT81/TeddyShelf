@@ -16,12 +16,21 @@ from .domain import Book, NamingProfile
 
 
 def data_directory() -> Path:
-    root = Path(
-        os.environ.get(
-            "TEDDYSTUDIO_DATA",
-            Path(os.environ.get("LOCALAPPDATA", Path.home())) / "TeddyStudio",
-        )
-    )
+    # Keep the same journal/lock for existing installations; never split a library
+    # merely because the program's display name changed.
+    configured = os.environ.get("TEDDYSHELF_DATA") or os.environ.get("TEDDYSTUDIO_DATA")
+    if configured:
+        root = Path(configured)
+    else:
+        base = Path(os.environ.get("LOCALAPPDATA", Path.home()))
+        current, legacy = base / "TeddyShelf", base / "TeddyStudio"
+
+        def has_data(path):
+            return any(
+                (path / name).is_file() for name in ("settings.json", "library.sqlite")
+            )
+
+        root = legacy if not has_data(current) and has_data(legacy) else current
     root.mkdir(parents=True, exist_ok=True)
     return root
 
@@ -41,7 +50,7 @@ class Settings:
     parallel_jobs: int = 1
     cloud_overlay: str = ""
     download_destination: str = field(
-        default_factory=lambda: str(Path.home() / "Music" / "TeddyStudio-Downloads")
+        default_factory=lambda: str(Path.home() / "Music" / "TeddyShelf-Downloads")
     )
     url: str = ""
     verify_tls: bool = True
@@ -50,7 +59,7 @@ class Settings:
         default_factory=lambda: str(Path.home() / "Music" / "Hoerspiele")
     )
     export: str = field(
-        default_factory=lambda: str(Path.home() / "Music" / "TeddyStudio-Export")
+        default_factory=lambda: str(Path.home() / "Music" / "TeddyShelf-Export")
     )
     ffmpeg: str = ""
     ffprobe: str = ""

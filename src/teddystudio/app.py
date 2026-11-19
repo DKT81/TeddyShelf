@@ -51,7 +51,7 @@ class MainWindow(QMainWindow):
         )
         if font.is_file():
             QFontDatabase.addApplicationFont(str(font))
-        self.setWindowTitle("TeddyStudio · Import & Audio")
+        self.setWindowTitle("TeddyShelf · Import & Audio")
         assets = Path(getattr(sys, "_MEIPASS", Path(__file__).parents[2])) / "assets"
         self.setWindowIcon(QIcon(str(assets / "teddystudio.svg")))
         self.resize(1480, 980)
@@ -82,7 +82,7 @@ class MainWindow(QMainWindow):
         )
         mark.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sidebar.addWidget(mark)
-        logo = QLabel("TeddyStudio\nImport & Audio")
+        logo = QLabel("TeddyShelf\nImport & Audio")
         logo.setStyleSheet(
             "font-size: 23px; font-weight: 700; padding: 20px; color: #00877e;"
         )
@@ -182,7 +182,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Bereit · Quell-Audios bleiben erhalten")
         self.version_label = QLabel(f"V {__version__}")
         self.version_label.setObjectName("applicationVersion")
-        self.version_label.setToolTip(f"TeddyStudio · Version {__version__}")
+        self.version_label.setToolTip(f"TeddyShelf · Version {__version__}")
         self.statusBar().addPermanentWidget(self.version_label)
         self.apply_theme()
         if self.settings.show_unfinished and any(
@@ -497,16 +497,16 @@ def main():
 
         return run(sys.argv[2])
     app = QApplication(sys.argv)
-    app.setApplicationName("TeddyStudio")
+    app.setApplicationName("TeddyShelf")
     app.setApplicationVersion(__version__)
-    app.setOrganizationName("TeddyStudio")
+    app.setOrganizationName("TeddyShelf")
     try:
         with exclusive_lock(data_directory() / "application.lock"):
             window = MainWindow()
             window.show()
             return app.exec()
     except Exception as exc:
-        QMessageBox.critical(None, "TeddyStudio", str(exc))
+        QMessageBox.critical(None, "TeddyShelf", str(exc))
         return 1
 
 

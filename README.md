@@ -1,4 +1,6 @@
-# TeddyStudio
+# TeddyShelf
+
+**TeddyShelf hieß bisher TeddyStudio.** Da TeddyCloud bereits eine Funktion mit dem Namen **TeddyStudio** enthält, wurde dieses eigenständige Programm in **TeddyShelf** umbenannt, um Verwechslungen zu vermeiden. Die Umbenennung ändert weder die Verbindung zu TeddyCloud noch vorhandene Einstellungen oder Sammlungsdaten.
 
 Eigenständige Windows-Anwendung für Hörspielsammlungen, Metadaten, Cover, Audioschnitt und geprüfte TeddyCloud-Importe. Oberfläche nach Coverbibliothek B: Serien-/Ordnerauswahl, Coverkarten und Detailbereich unter der Sammlung.
 
@@ -57,7 +59,9 @@ Modellkennungen, sichtbare Titel, Dateinamen und Zielordner mit Vorlagen konfigu
 
 ## Starten
 
-Das portable Windows-Paket vollständig entpacken und **TeddyStudio.exe** öffnen. Python und TonieToolbox müssen nicht installiert sein. FFmpeg, FFprobe, Qt und die benötigten Python-Bibliotheken werden mitgeliefert. Einstellungen und Aufträge liegen unter `%LOCALAPPDATA%/TeddyStudio`; ein anderer Datenordner kann über `TEDDYSTUDIO_DATA` gewählt werden.
+TeddyShelf hieß bisher TeddyStudio. Vorhandene Einstellungen und Sammlungsdaten werden weiterhin aus `%LOCALAPPDATA%/TeddyStudio` geladen, wenn dort eine bisherige Installation vorhanden ist und im neuen Datenordner noch keine eigene Konfiguration liegt. Neue Installationen verwenden `%LOCALAPPDATA%/TeddyShelf`. `TEDDYSHELF_DATA` hat Vorrang; das bisherige `TEDDYSTUDIO_DATA` wird weiterhin unterstützt. Interne Python-Importpfade und vorhandene Export-Manifeste behalten aus Kompatibilitätsgründen ihren bisherigen technischen Namen.
+
+Das portable Windows-Paket vollständig entpacken und **TeddyShelf.exe** öffnen. Python und TonieToolbox müssen nicht installiert sein. FFmpeg, FFprobe, Qt und die benötigten Python-Bibliotheken werden mitgeliefert. Einstellungen und Aufträge liegen unter `%LOCALAPPDATA%/TeddyShelf`; ein anderer Datenordner kann über `TEDDYSHELF_DATA` gewählt werden.
 
 1. Unter **Einstellungen** die TeddyCloud-Adresse, Quell- und Exportordner konfigurieren. Bei selbstsigniertem HTTPS das eigene CA-Zertifikat auswählen oder die Zertifikatsprüfung bewusst für den LAN-Server ausschalten. Verbindung testen.
 2. **Sammlung → Ordner einlesen** liest Unterordner und fasst Audiospuren desselben Ordners zu einem Hörspiel zusammen. Unsichere Zuordnungen prüfen. Lose Käptn-Sharky-Ordner werden als Serie erkannt; unbekannte Folgenummern bleiben leer.
@@ -103,7 +107,7 @@ Die Dokumentationsbilder lassen sich mit `python scripts/make_screenshots.py` au
 
 Eine erfolgreiche technische Prüfung ersetzt keinen Hörtest auf einer physischen Toniebox.
 
-TeddyStudio ist ein unabhängiges Projekt und kein Produkt des Herstellers der Toniebox.
+TeddyShelf ist ein unabhängiges Projekt und kein Produkt des Herstellers der Toniebox.
 100% mit codex erstellt und für den Heimgebrauch gedacht
 
 Der [Prüfbericht](docs/VALIDATION.md) dokumentiert den aktuellen Quellstand und die Grenzen der Prüfung. Hinweise zur Veröffentlichung und zum Schutz lokaler Daten stehen unter [Datenschutz](docs/PRIVACY.md).

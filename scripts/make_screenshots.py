@@ -20,7 +20,7 @@ os.environ["QT_SCALE_FACTOR"] = "1"
 def main():
     # Never load the user's database, settings, covers or server inventory.
     temporary = tempfile.TemporaryDirectory(prefix="teddystudio-screenshots-")
-    os.environ["TEDDYSTUDIO_DATA"] = temporary.name
+    os.environ["TEDDYSHELF_DATA"] = temporary.name
     from PySide6.QtCore import Qt, QRectF, QTime
     from PySide6.QtGui import QColor, QPainter, QPixmap, QFont, QFontDatabase
     from PySide6.QtWidgets import QApplication
@@ -48,8 +48,8 @@ def main():
     settings = Settings(
         url="http://teddycloud.example",
         source="D:/Hoerspiele",
-        export="D:/TeddyStudio/Export",
-        download_destination="D:/TeddyStudio/Downloads",
+        export="D:/TeddyShelf/Export",
+        download_destination="D:/TeddyShelf/Downloads",
         theme="Hell",
         parallel_jobs=2,
         show_unfinished=False,

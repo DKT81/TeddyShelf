@@ -223,8 +223,9 @@ def create(pcm, output, chapter_seconds, ffmpeg="", bitrate=96, timeout=1800):
         preskip = struct.unpack_from("<H", packets[0], 10)[0]
         head = make_page([packets[0]], 0, 0, audio_id, 2)
         # Header pages occupy 512 bytes; the first audio page fills the 4096 block.
+        vendor = b"TeddyShelf"
         tags = (
-            b"OpusTags" + struct.pack("<I", 11) + b"TeddyStudio" + struct.pack("<I", 0)
+            b"OpusTags" + struct.pack("<I", len(vendor)) + vendor + struct.pack("<I", 0)
         )
         for length in range(400, 512):
             comments = tags + bytes(max(0, length - len(tags)))

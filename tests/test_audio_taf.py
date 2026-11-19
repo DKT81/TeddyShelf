@@ -25,6 +25,9 @@ def test_standalone_taf_integrity_duration_chapters_and_blocks(
     raw = target.read_bytes()
     assert len(raw) % 4096 == 0
     pages = list(taf.pages(raw[4096:]))
+    tags = pages[1].packets[0]
+    vendor_length = struct.unpack_from("<I", tags, 8)[0]
+    assert tags[12 : 12 + vendor_length] == b"TeddyShelf"
     preskip = struct.unpack_from("<H", pages[0].packets[0], 10)[0]
     chapter_start = (pages[info["chapterPages"][1] - 1].granule - preskip) / 48000
     assert 2 <= chapter_start <= 2.02

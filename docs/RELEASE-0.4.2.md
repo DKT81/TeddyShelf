@@ -1,4 +1,4 @@
-# TeddyStudio 0.4.2
+# TeddyShelf 0.4.2
 
 Bereinigter Quellstand für eine unabhängige öffentliche Repository-Historie: keine voreingestellte persönliche Serveradresse, neutraler benutzerbezogener Quellordner und erfundene Metadatenvorschau. Ohne Serveradresse erklärt der Sammlungsabgleich die erforderliche Einrichtung, ohne einen Netzwerkzugriff zu starten.
 

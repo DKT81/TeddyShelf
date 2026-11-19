@@ -4,7 +4,7 @@ Die Anwendung enthält keine voreingestellte persönliche Serveradresse. Die eig
 
 ## Lokale Daten
 
-Einstellungen, Sammlung, Auftragsprotokolle, Serverinventare und Arbeitsdateien liegen im lokalen Anwendungsdatenordner oder unter dem ausdrücklich gewählten `TEDDYSTUDIO_DATA`. Sie können Dateipfade, Hörspieltitel, Serveradressen und Tonie-Zuordnungen enthalten. Diese Daten gehören nicht in das öffentliche Repository und nicht in weitergegebene Programmarchive. Exportierte Protokolle und Konfigurationsdateien vor dem Teilen prüfen.
+Einstellungen, Sammlung, Auftragsprotokolle, Serverinventare und Arbeitsdateien liegen im lokalen Anwendungsdatenordner oder unter dem ausdrücklich gewählten `TEDDYSHELF_DATA`. Sie können Dateipfade, Hörspieltitel, Serveradressen und Tonie-Zuordnungen enthalten. Diese Daten gehören nicht in das öffentliche Repository und nicht in weitergegebene Programmarchive. Exportierte Protokolle und Konfigurationsdateien vor dem Teilen prüfen.
 
 ## Quellcode und Git
 

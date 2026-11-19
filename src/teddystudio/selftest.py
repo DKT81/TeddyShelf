@@ -12,6 +12,7 @@ def run(directory):
     root = Path(directory).resolve()
     root.mkdir(parents=True, exist_ok=True)
     os.environ["TEDDYSTUDIO_DATA"] = str(root / "data")
+    os.environ["TEDDYSHELF_DATA"] = str(root / "data")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     report = {"passed": False, "frozen": bool(getattr(sys, "frozen", False))}
     try:
