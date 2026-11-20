@@ -18,6 +18,12 @@ os.environ["QT_SCALE_FACTOR"] = "1"
 
 
 def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--language", default="de", choices=["de", "en"])
+    parser.add_argument("--output", type=Path)
+    options = parser.parse_args()
     # Never load the user's database, settings, covers or server inventory.
     temporary = tempfile.TemporaryDirectory(prefix="teddystudio-screenshots-")
     os.environ["TEDDYSHELF_DATA"] = temporary.name
@@ -41,11 +47,12 @@ def main():
     symbols = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts" / "seguisym.ttf"
     if symbols.is_file():
         QFontDatabase.addApplicationFont(str(symbols))
-    output = ROOT / "docs" / "images"
+    output = (options.output or ROOT / "docs" / "images").resolve()
     fixtures = ROOT / "artifacts" / "screenshots-demo"
     output.mkdir(parents=True, exist_ok=True)
     fixtures.mkdir(parents=True, exist_ok=True)
     settings = Settings(
+        language=options.language,
         url="http://teddycloud.example",
         source="D:/Hoerspiele",
         export="D:/TeddyShelf/Export",

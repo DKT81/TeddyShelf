@@ -31,6 +31,8 @@ def main():
         "--add-data",
         f"{ROOT / 'assets'};assets",
         "--add-data",
+        f"{ROOT / 'src' / 'teddystudio' / 'locales'};teddystudio/locales",
+        "--add-data",
         f"{ROOT / 'docs'};docs",
         "--add-data",
         f"{ROOT / 'LICENSE'};.",
@@ -61,6 +63,11 @@ def main():
     import PySide6
     import shiboken6
 
+    qt_translation = Path(PySide6.__file__).parent / "translations" / "qtbase_de.qm"
+    if not qt_translation.is_file():
+        raise SystemExit("Missing Qt German translation catalog")
+    command[3:3] = ["--add-data", f"{qt_translation};PySide6/translations"]
+
     environment = dict(os.environ)
     windows = Path(environment.get("SystemRoot", "C:/Windows"))
     environment["PATH"] = os.pathsep.join(
@@ -76,7 +83,7 @@ def main():
     subprocess.run(command, cwd=ROOT, env=environment, check=True)
     folder = ROOT / "dist" / "TeddyShelf"
     shutil.copy2(ROOT / "README.md", folder)
-    archive = ROOT / "dist" / "TeddyShelf-0.5.0-Windows-x64.zip"
+    archive = ROOT / "dist" / "TeddyShelf-0.6.0-Windows-x64.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as output:
         for path in folder.rglob("*"):
             if path.is_file():

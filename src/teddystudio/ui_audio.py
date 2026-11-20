@@ -1,5 +1,8 @@
 """Audio source ordering, preview player, waveform and real split-job creation."""
 
+from .i18n import text as tr_text, format_text as _f
+from .i18n_widgets import call as _ui, create as _new
+
 from dataclasses import asdict
 from pathlib import Path
 import uuid
@@ -90,13 +93,17 @@ class Waveform(QWidget):
                     round(self.height() / 2 + half),
                 )
         else:
-            painter.drawText(
+            _ui(
+                painter,
+                "drawText",
                 self.rect(),
                 Qt.AlignmentFlag.AlignCenter,
                 (
-                    "Wellenform laden, um das Audio anzuzeigen"
+                    tr_text("Wellenform laden, um das Audio anzuzeigen")
                     if self.duration
-                    else "Audiodateien hinzufügen oder Auswahl aus Sammlung übernehmen"
+                    else tr_text(
+                        "Audiodateien hinzufügen oder Auswahl aus Sammlung übernehmen"
+                    )
                 ),
             )
         if self.duration:
@@ -135,8 +142,10 @@ class AudioPage(QWidget):
         layout = QVBoxLayout(self)
         layout.addWidget(
             heading(
-                "Audio aufteilen",
-                "Dateien verbinden, vorhören und in frei wählbare Abschnitte schneiden",
+                tr_text("Audio aufteilen"),
+                tr_text(
+                    "Dateien verbinden, vorhören und in frei wählbare Abschnitte schneiden"
+                ),
             )
         )
         self.splitter = QSplitter(Qt.Orientation.Vertical)
@@ -149,21 +158,28 @@ class AudioPage(QWidget):
         self.splitter.addWidget(input_panel)
         input_layout.addWidget(
             row(
-                button("Audiodateien hinzufügen", self.add_files),
-                button("Aus Sammlung übernehmen", self.from_collection),
-                button("Liste leeren", self.clear),
+                button(tr_text("Audiodateien hinzufügen"), self.add_files),
+                button(tr_text("Aus Sammlung übernehmen"), self.from_collection),
+                button(tr_text("Liste leeren"), self.clear),
             )
         )
         input_layout.addWidget(
-            QLabel(
-                "Eingabe-Playlist · Dateien in Wiedergabereihenfolge (Drag-and-drop möglich)"
+            _new(
+                QLabel,
+                tr_text(
+                    "Eingabe-Playlist · Dateien in Wiedergabereihenfolge (Drag-and-drop möglich)"
+                ),
             )
         )
         self.sources_list = SourceList()
         self.sources_list.files_dropped.connect(self.add_paths)
         self.sources_list.reordered.connect(self.sources_reordered)
-        self.sources_list.setToolTip(
-            "Hier Audiodateien oder Ordner aus dem Explorer ablegen. Einträge innerhalb der Liste ziehen, um ihre Reihenfolge zu ändern. Dateien werden nicht verschoben."
+        _ui(
+            self.sources_list,
+            "setToolTip",
+            tr_text(
+                "Hier Audiodateien oder Ordner aus dem Explorer ablegen. Einträge innerhalb der Liste ziehen, um ihre Reihenfolge zu ändern. Dateien werden nicht verschoben."
+            ),
         )
         self.sources_list.setMinimumHeight(60)
         self.sources_list.setUniformItemSizes(True)
@@ -171,10 +187,10 @@ class AudioPage(QWidget):
         input_layout.addWidget(self.sources_list)
         input_layout.addWidget(
             row(
-                button("Quelle ↑", lambda: self.move(-1)),
-                button("Quelle ↓", lambda: self.move(1)),
-                button("Quelle entfernen", self.remove),
-                button("Wellenform laden", self.load_waveform),
+                button(tr_text("Quelle ↑"), lambda: self.move(-1)),
+                button(tr_text("Quelle ↓"), lambda: self.move(1)),
+                button(tr_text("Quelle entfernen"), self.remove),
+                button(tr_text("Wellenform laden"), self.load_waveform),
             )
         )
         wave_panel = QWidget()
@@ -182,17 +198,21 @@ class AudioPage(QWidget):
         wave_layout.setContentsMargins(0, 0, 0, 0)
         self.splitter.addWidget(wave_panel)
         self.wave = Waveform()
-        self.wave.setToolTip(
-            "Wellenform der gesamten Eingabe-Playlist. Orange Linien zeigen geplante Schnittgrenzen; mit Wellenform laden berechnen."
+        _ui(
+            self.wave,
+            "setToolTip",
+            tr_text(
+                "Wellenform der gesamten Eingabe-Playlist. Orange Linien zeigen geplante Schnittgrenzen; mit Wellenform laden berechnen."
+            ),
         )
         wave_layout.addWidget(self.wave)
         self.seek = QSlider(Qt.Orientation.Horizontal)
         self.seek.sliderMoved.connect(self.seek_to)
         wave_layout.addWidget(
             row(
-                button("▶ Vorhören", self.play),
-                button("Pause", self.pause),
-                button("Stopp", self.stop),
+                button(tr_text("▶ Vorhören"), self.play),
+                button(tr_text("Pause"), self.pause),
+                button(tr_text("Stopp"), self.stop),
                 self.seek,
             )
         )
@@ -202,41 +222,79 @@ class AudioPage(QWidget):
         self.splitter.addWidget(output_panel)
         form = QFormLayout()
         output_layout.addLayout(form)
-        self.title = QLineEdit("Mein Hörbuch")
+        self.title = _new(QLineEdit, tr_text("Mein Hörbuch"))
         self.length = QTimeEdit(QTime(0, 10, 0))
-        self.length.setDisplayFormat("HH:mm:ss")
-        self.length.setToolTip(
-            "Gewünschte Länge jedes Abschnitts in Stunden, Minuten und Sekunden. Der letzte Abschnitt kann kürzer sein."
+        self.length.setDisplayFormat(tr_text("HH:mm:ss"))
+        _ui(
+            self.length,
+            "setToolTip",
+            tr_text(
+                "Gewünschte Länge jedes Abschnitts in Stunden, Minuten und Sekunden. Der letzte Abschnitt kann kürzer sein."
+            ),
         )
-        self.mode = QComboBox()
-        self.mode.addItems(media.AUDIO_MODES)
+        self.mode = _new(QComboBox)
+        _ui(self.mode, "addItems", media.AUDIO_MODES)
         self.mode.setCurrentText(settings.audio_mode)
-        self.mode.setToolTip(
-            "Separate Dateien: feste Zeitabschnitte. TAF mit Kapiteln: Kapitel nach Zeit. "
-            "TAF als Playlist: jede Quelldatei vollständig als Kapitel in Listenreihenfolge, ohne Kürzung. "
-            "Für TAF wird Audio konvertiert; die Quellen bleiben unverändert."
+        _ui(
+            self.mode,
+            "setToolTip",
+            tr_text(
+                "Separate Dateien: feste Zeitabschnitte. TAF mit Kapiteln: Kapitel nach Zeit. "
+                "TAF als Playlist: jede Quelldatei vollständig als Kapitel in Listenreihenfolge, ohne Kürzung. "
+                "Für TAF wird Audio konvertiert; die Quellen bleiben unverändert."
+            ),
         )
-        self.target = QComboBox()
-        self.target.addItems(["Nur lokal", "Nur TeddyCloud", "Lokal und TeddyCloud"])
-        self.format = QComboBox()
-        self.format.addItems(["mp3", "opus", "flac", "wav"])
+        self.target = _new(QComboBox)
+        _ui(
+            self.target,
+            "addItems",
+            [
+                tr_text("Nur lokal"),
+                tr_text("Nur TeddyCloud"),
+                tr_text("Lokal und TeddyCloud"),
+            ],
+        )
+        self.format = _new(QComboBox)
+        _ui(self.format, "addItems", ["mp3", "opus", "flac", "wav"])
         self.format.setCurrentText(settings.audio_format)
-        self.destination = QLineEdit(settings.export)
-        form.addRow("Titel", self.title)
-        form.addRow("Abschnittslänge", self.length)
-        form.addRow("Verarbeitung", self.mode)
-        form.addRow("Ziel", self.target)
-        form.addRow("Audioformat", self.format)
-        form.addRow("Exportordner", path_control(self.destination, self))
+        self.destination = _new(QLineEdit, settings.export)
+        _ui(form, "addRow", tr_text("Titel"), self.title)
+        _ui(form, "addRow", tr_text("Abschnittslänge"), self.length)
+        _ui(form, "addRow", tr_text("Verarbeitung"), self.mode)
+        _ui(form, "addRow", tr_text("Ziel"), self.target)
+        _ui(form, "addRow", tr_text("Audioformat"), self.format)
+        _ui(
+            form,
+            "addRow",
+            tr_text("Exportordner"),
+            path_control(self.destination, self),
+        )
         output_layout.addWidget(
-            QLabel("Ausgabevorschau · geplante Abschnitte (keine zweite Playlist)")
+            _new(
+                QLabel,
+                tr_text(
+                    "Ausgabevorschau · geplante Abschnitte (keine zweite Playlist)"
+                ),
+            )
         )
         self.parts = QTableWidget(0, 5)
-        self.parts.setToolTip(
-            "Schnittplan für die zusammenhängende Eingabe-Playlist. Erst Auftrag erstellen und anschließend ausführen erzeugt Dateien."
+        _ui(
+            self.parts,
+            "setToolTip",
+            tr_text(
+                "Schnittplan für die zusammenhängende Eingabe-Playlist. Erst Auftrag erstellen und anschließend ausführen erzeugt Dateien."
+            ),
         )
-        self.parts.setHorizontalHeaderLabels(
-            ["Teil", "Start", "Dauer", "Dateiname", "Enthaltene Quelldateien"]
+        _ui(
+            self.parts,
+            "setHorizontalHeaderLabels",
+            [
+                tr_text("Teil"),
+                tr_text("Start"),
+                tr_text("Dauer"),
+                tr_text("Dateiname"),
+                tr_text("Enthaltene Quelldateien"),
+            ],
         )
         self.parts.horizontalHeader().setStretchLastSection(False)
         self.parts.horizontalHeader().setSectionResizeMode(
@@ -248,13 +306,20 @@ class AudioPage(QWidget):
         output_layout.addWidget(self.parts, 1)
         self.splitter.setSizes([200, 130, 430])
         for index in (1, 2):
-            self.splitter.handle(index).setToolTip(
-                "Ziehen, um Playlist, Wellenform und Ausgabevorschau in der Höhe anzupassen."
+            _ui(
+                self.splitter.handle(index),
+                "setToolTip",
+                tr_text(
+                    "Ziehen, um Playlist, Wellenform und Ausgabevorschau in der Höhe anzupassen."
+                ),
             )
-        self.summary = QLabel()
+        self.summary = _new(QLabel)
         self.summary.setWordWrap(True)
         layout.addWidget(
-            row(self.summary, button("Auftrag erstellen", self.create_job, True))
+            row(
+                self.summary,
+                button(tr_text("Auftrag erstellen"), self.create_job, True),
+            )
         )
         self.length.timeChanged.connect(self.update_plan)
         self.mode.currentIndexChanged.connect(self.update_plan)
@@ -268,11 +333,13 @@ class AudioPage(QWidget):
         return value.hour() * 3600 + value.minute() * 60 + value.second()
 
     def add_files(self):
-        paths, _ = QFileDialog.getOpenFileNames(
+        paths, _ = _ui(
+            QFileDialog,
+            "getOpenFileNames",
             self,
-            "Audiodateien",
+            tr_text("Audiodateien"),
             self.settings.source,
-            "Audio (*.mp3 *.m4a *.m4b *.flac *.wav *.ogg *.opus *.aac *.wma)",
+            tr_text("Audio (*.mp3 *.m4a *.m4b *.flac *.wav *.ogg *.opus *.aac *.wma)"),
         )
         self.add_paths(paths)
 
@@ -326,24 +393,30 @@ class AudioPage(QWidget):
     def from_collection(self):
         books = self.collection.selection()
         if not books:
-            QMessageBox.information(
-                self, "Audio", "Bitte zuerst Hörspiele in der Sammlung auswählen."
+            _ui(
+                QMessageBox,
+                "information",
+                self,
+                tr_text("Audio"),
+                tr_text("Bitte zuerst Hörspiele in der Sammlung auswählen."),
             )
             return
         self.sources = [track for book in books for track in book.tracks]
         self.book = Book.from_dict(books[0].to_dict()) if len(books) == 1 else None
-        self.title.setText(books[0].title)
+        _ui(self.title, "setText", books[0].title)
         self.refresh_sources()
 
     def refresh_sources(self):
         self.sources_list.clear()
         for track in self.sources:
-            self.sources_list.addItem(
-                f"{Path(track.path).name} · {clock(track.duration)}"
+            _ui(
+                self.sources_list,
+                "addItem",
+                f"{Path(track.path).name} · {clock(track.duration)}",
             )
             item = self.sources_list.item(self.sources_list.count() - 1)
             item.setData(Qt.ItemDataRole.UserRole, track)
-            item.setToolTip(track.path)
+            _ui(item, "setToolTip", track.path)
         self.update_plan()
 
     def move(self, delta):
@@ -416,7 +489,7 @@ class AudioPage(QWidget):
                     if b > start and a < start + length
                 ]
                 source_text = ", ".join(str(n) for a, b, n, t in contributors)
-                source_tip = "\n".join(
+                source_tip = tr_text("\n").join(
                     f"{n}. {Path(t.path).name}: {clock(max(0, start-a))} – {clock(min(t.duration, start+length-a))}"
                     for a, b, n, t in contributors
                 )
@@ -438,25 +511,36 @@ class AudioPage(QWidget):
                         source_text,
                     ]
                 ):
-                    self.parts.setItem(index, column, QTableWidgetItem(text))
-                    self.parts.item(index, column).setToolTip(text)
-                self.parts.item(index, 4).setToolTip(source_tip)
-            self.summary.setText(
-                f"{len(self.sources)} Quelldateien · {clock(duration)} gesamt → "
+                    self.parts.setItem(index, column, _new(QTableWidgetItem, text))
+                    _ui(self.parts.item(index, column), "setToolTip", text)
+                _ui(self.parts.item(index, 4), "setToolTip", source_tip)
+            _ui(
+                self.summary,
+                "setText",
+                _f(
+                    "{p0} Quelldateien · {p1} gesamt → ",
+                    p0=len(self.sources),
+                    p1=clock(duration),
+                )
                 + (
-                    f"1 TAF mit {len(plan)} Kapiteln"
+                    _f("1 TAF mit {p0} Kapiteln", p0=len(plan))
                     if self.mode.currentIndex()
-                    else f"{len(plan)} Ausgabedateien"
+                    else _f("{p0} Ausgabedateien", p0=len(plan))
                 )
                 + (
-                    " · Jede Quelldatei vollständig als Kapitel · kein Zeitschnitt, keine Kürzung"
+                    tr_text(
+                        " · Jede Quelldatei vollständig als Kapitel · kein Zeitschnitt, keine Kürzung"
+                    )
                     if playlist
-                    else f" · Schnitt alle {clock(self.seconds())} · Dateien werden zuvor verbunden, nichts entfällt"
-                )
+                    else _f(
+                        " · Schnitt alle {p0} · Dateien werden zuvor verbunden, nichts entfällt",
+                        p0=clock(self.seconds()),
+                    )
+                ),
             )
         except Exception as exc:
             self.parts.setRowCount(0)
-            self.summary.setText(str(exc))
+            _ui(self.summary, "setText", str(exc))
 
     def load_waveform(self):
         if not self.sources:
@@ -488,7 +572,9 @@ class AudioPage(QWidget):
             self.player.durationChanged.connect(self.seek.setMaximum)
             self.player.positionChanged.connect(self.seek.setValue)
             self.player.errorOccurred.connect(
-                lambda error, message: self.summary.setText("Vorhören: " + message)
+                lambda error, message: _ui(
+                    self.summary, "setText", tr_text("Vorhören: ") + message
+                )
             )
 
     def pause(self):
@@ -505,15 +591,25 @@ class AudioPage(QWidget):
 
     def create_job(self):
         if not self.sources or (self.mode.currentIndex() != 2 and self.seconds() <= 0):
-            QMessageBox.warning(
+            _ui(
+                QMessageBox,
+                "warning",
                 self,
-                "Audio",
-                "Audiodateien und eine Abschnittslänge größer als null wählen.",
+                tr_text("Audio"),
+                tr_text(
+                    "Audiodateien und eine Abschnittslänge größer als null wählen."
+                ),
             )
             return
         book = self.working_book()
         if not book.title:
-            QMessageBox.warning(self, "Audio", "Bitte einen Titel angeben.")
+            _ui(
+                QMessageBox,
+                "warning",
+                self,
+                tr_text("Audio"),
+                tr_text("Bitte einen Titel angeben."),
+            )
             return
         payload = {
             "book": book.to_dict(),
@@ -527,5 +623,5 @@ class AudioPage(QWidget):
                 "destination": self.destination.text(),
             },
         }
-        self.store.add_job("Audio aufteilen", payload)
+        self.store.add_job(tr_text("Audio aufteilen"), payload)
         self.jobs_added()

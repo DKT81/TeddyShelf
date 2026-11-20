@@ -1,5 +1,8 @@
 """Application composition. Views call services; workers never manipulate widgets."""
 
+from .i18n import text as tr_text, format_text as _f
+from .i18n_widgets import call as _ui, create as _new
+
 from dataclasses import asdict
 from pathlib import Path
 import json
@@ -47,15 +50,18 @@ class MainWindow(QMainWindow):
         font = (
             Path(getattr(sys, "_MEIPASS", Path(__file__).parents[2]))
             / "assets"
-            / "NotoSans-Regular.ttf"
+            / tr_text("NotoSans-Regular.ttf")
         )
         if font.is_file():
             QFontDatabase.addApplicationFont(str(font))
-        self.setWindowTitle("TeddyShelf · Import & Audio")
+        _ui(self, "setWindowTitle", "TeddyShelf · Import & Audio")
         assets = Path(getattr(sys, "_MEIPASS", Path(__file__).parents[2])) / "assets"
         self.setWindowIcon(QIcon(str(assets / "teddystudio.svg")))
         self.resize(1480, 980)
         self.settings = settings or Settings.load()
+        from .i18n import manager
+
+        manager.set_language(self.settings.language)
         self.store = store or Store()
         from .workspace import clean_inactive
 
@@ -71,7 +77,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(root)
         layout = QHBoxLayout(root)
         sidebar = QVBoxLayout()
-        mark = QLabel()
+        mark = _new(QLabel)
         mark.setPixmap(
             QPixmap(str(assets / "teddystudio.svg")).scaled(
                 96,
@@ -82,29 +88,34 @@ class MainWindow(QMainWindow):
         )
         mark.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sidebar.addWidget(mark)
-        logo = QLabel("TeddyShelf\nImport & Audio")
+        logo = _new(QLabel, "TeddyShelf\nImport & Audio")
         logo.setStyleSheet(
             "font-size: 23px; font-weight: 700; padding: 20px; color: #00877e;"
         )
         sidebar.addWidget(logo)
         self.navigation = QListWidget()
-        self.navigation.addItems(
+        _ui(
+            self.navigation,
+            "addItems",
             [
-                "Sammlung",
-                "Stapelbearbeitung",
-                "Audio",
-                "Cover & Etiketten",
-                "Aufträge",
-                "Einstellungen",
-                "TeddyCloud-Bestand",
-                "Tonies / Tags",
-            ]
+                tr_text("Sammlung"),
+                tr_text("Stapelbearbeitung"),
+                tr_text("Audio"),
+                tr_text("Cover & Etiketten"),
+                tr_text("Aufträge"),
+                tr_text("Einstellungen"),
+                tr_text("TeddyCloud-Bestand"),
+                tr_text("Tonies / Tags"),
+            ],
         )
         self.navigation.setFixedWidth(205)
         sidebar.addWidget(self.navigation)
         sidebar.addWidget(
-            QLabel(
-                "Lokal arbeiten · geprüft übertragen\nTagänderungen nur nach Vorschau"
+            _new(
+                QLabel,
+                tr_text(
+                    "Lokal arbeiten · geprüft übertragen\nTagänderungen nur nach Vorschau"
+                ),
             )
         )
         layout.addLayout(sidebar)
@@ -126,7 +137,7 @@ class MainWindow(QMainWindow):
 
         def offer_tag(entry):
             self.tags_page.loaded = None
-            self.tags_page.overlay.setText(self.cloud_page.snapshot["overlay"])
+            _ui(self.tags_page.overlay, "setText", self.cloud_page.snapshot["overlay"])
             self.tags_page.pending_entry = entry
             self.tags_page.bind_entry(entry)
             self.navigation.setCurrentRow(7)
@@ -141,26 +152,33 @@ class MainWindow(QMainWindow):
         # Metadata shares the same source of truth, with explicit batch operations.
         metadata = QWidget()
         ml = QVBoxLayout(metadata)
-        ml.addWidget(QLabel("Metadaten mehrerer Hörspiele gemeinsam ändern"))
         ml.addWidget(
-            QLabel(
-                "Einzelne Titel und Spuren bearbeiten Sie in der Sammlung. Diese Ansicht ist für Stapeländerungen, z. B. derselbe Sprecher oder dasselbe Genre für eine ganze Serie.\nFür mehrere ausgewählte Hörspiele können hier gemeinsame Angaben mit Vorschau geändert werden."
+            _new(QLabel, tr_text("Metadaten mehrerer Hörspiele gemeinsam ändern"))
+        )
+        ml.addWidget(
+            _new(
+                QLabel,
+                tr_text(
+                    "Einzelne Titel und Spuren bearbeiten Sie in der Sammlung. Diese Ansicht ist für Stapeländerungen, z. B. derselbe Sprecher oder dasselbe Genre für eine ganze Serie.\nFür mehrere ausgewählte Hörspiele können hier gemeinsame Angaben mit Vorschau geändert werden."
+                ),
             )
         )
         ml.addWidget(
             button(
-                "Detailansicht der Sammlung öffnen",
+                tr_text("Detailansicht der Sammlung öffnen"),
                 lambda: self.navigation.setCurrentRow(0),
             )
         )
         ml.addWidget(
             button(
-                "Ausgewählte Hörspiele gemeinsam bearbeiten …",
+                tr_text("Ausgewählte Hörspiele gemeinsam bearbeiten …"),
                 self.batch_metadata,
                 True,
             )
         )
-        ml.addWidget(button("Serienzuordnung ändern …", self.collection.regroup))
+        ml.addWidget(
+            button(tr_text("Serienzuordnung ändern …"), self.collection.regroup)
+        )
         ml.addStretch()
         for page in [
             self.collection,
@@ -179,14 +197,24 @@ class MainWindow(QMainWindow):
         self.collection.import_requested.connect(self.preview_import)
         self.collection.selected.connect(self.settings_page.set_preview_book)
         self.bridge.changed.connect(self.jobs_changed)
-        self.statusBar().showMessage("Bereit · Quell-Audios bleiben erhalten")
-        self.version_label = QLabel(f"V {__version__}")
+        _ui(
+            self.statusBar(),
+            "showMessage",
+            tr_text("Bereit · Quell-Audios bleiben erhalten"),
+        )
+        self.version_label = _new(QLabel, _f("V {p0}", p0=__version__))
         self.version_label.setObjectName("applicationVersion")
-        self.version_label.setToolTip(f"TeddyShelf · Version {__version__}")
+        _ui(
+            self.version_label,
+            "setToolTip",
+            _f("TeddyShelf · Version {p0}", p0=__version__),
+        )
         self.statusBar().addPermanentWidget(self.version_label)
         self.apply_theme()
+        manager.listen(self, "_language_changed")
         if self.settings.show_unfinished and any(
-            j["status"] in {"Wartet", "Unterbrochen"} for j in self.store.jobs()
+            j["status"] in {tr_text("Wartet"), tr_text("Unterbrochen")}
+            for j in self.store.jobs()
         ):
             self.navigation.setCurrentRow(4)
         if (
@@ -198,10 +226,19 @@ class MainWindow(QMainWindow):
                 0, lambda: self.collection.start_scan(self.settings.last_collection)
             )
 
+    def _language_changed(self):
+        # Refresh values read from persisted jobs without changing their storage.
+        self.collection.refresh_cards()
+        self.jobs_page.refresh()
+        self.audio_page.update_plan()
+        self.cloud_page.refresh()
+        for child in self.findChildren(QWidget):
+            child.update()
+
     def apply_theme(self):
         dark = (
-            self.settings.theme == "Dunkel"
-            or self.settings.theme == "System"
+            self.settings.theme == tr_text("Dunkel")
+            or self.settings.theme == tr_text("System")
             and QApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark
         )
         QApplication.instance().setStyleSheet(DARK if dark else LIGHT)
@@ -209,22 +246,32 @@ class MainWindow(QMainWindow):
     def batch_metadata(self):
         books = self.collection.selection()
         if not books:
-            QMessageBox.information(
-                self, "Metadaten", "Bitte Hörspiele in der Sammlung auswählen."
+            _ui(
+                QMessageBox,
+                "information",
+                self,
+                tr_text("Metadaten"),
+                tr_text("Bitte Hörspiele in der Sammlung auswählen."),
             )
             return
-        label, ok = QInputDialog.getItem(
+        label, ok = _ui(
+            QInputDialog,
+            "getItem",
             self,
-            "Stapelbearbeitung",
-            "Gemeinsames Feld",
+            tr_text("Stapelbearbeitung"),
+            tr_text("Gemeinsames Feld"),
             list(FIELDS.values()),
             editable=False,
         )
         if not ok:
             return
         key = next(k for k, v in FIELDS.items() if v == label)
-        value, ok = QInputDialog.getText(
-            self, "Stapelbearbeitung", f"Neuer Wert für {len(books)} Hörspiele:"
+        value, ok = _ui(
+            QInputDialog,
+            "getText",
+            self,
+            tr_text("Stapelbearbeitung"),
+            _f("Neuer Wert für {p0} Hörspiele:", p0=len(books)),
         )
         if not ok:
             return
@@ -234,32 +281,41 @@ class MainWindow(QMainWindow):
                 if key == "episode" and value
                 else None if key == "episode" else value
             )
-            preview = "\n".join(
-                f"{book.title}: {getattr(book, key)} → {value}" for book in books
+            preview = tr_text("\n").join(
+                _f("{p0}: {p1} → {p2}", p0=book.title, p1=getattr(book, key), p2=value)
+                for book in books
             )
             if (
-                QMessageBox.question(
+                _ui(
+                    QMessageBox,
+                    "question",
                     self,
-                    "Änderungsvorschau",
+                    tr_text("Änderungsvorschau"),
                     preview
-                    + "\n\nIn der Sammlung übernehmen (Quelldateien bleiben unverändert)?",
+                    + tr_text(
+                        "\n\nIn der Sammlung übernehmen (Quelldateien bleiben unverändert)?"
+                    ),
                 )
                 != QMessageBox.StandardButton.Yes
             ):
                 return
             for book in books:
                 setattr(book, key, value)
-                book.origin = "Manuell bearbeitete Metadaten"
+                book.origin = tr_text("Manuell bearbeitete Metadaten")
                 self.store.save_book(book)
             self.collection.refresh()
             self.collection.changed.emit()
         except Exception as exc:
-            QMessageBox.warning(self, "Metadaten", str(exc))
+            _ui(QMessageBox, "warning", self, tr_text("Metadaten"), str(exc))
 
     def preview_import(self, books):
         if not books:
-            QMessageBox.information(
-                self, "Import", "Bitte mindestens ein Hörspiel auswählen."
+            _ui(
+                QMessageBox,
+                "information",
+                self,
+                tr_text("Import"),
+                tr_text("Bitte mindestens ein Hörspiel auswählen."),
             )
             return
         try:
@@ -277,16 +333,18 @@ class MainWindow(QMainWindow):
             ]
             if unresolved:
                 raise ValueError(
-                    "Import noch nicht möglich:\n"
-                    + "\n".join(
+                    tr_text("Import noch nicht möglich:\n")
+                    + tr_text("\n").join(
                         book.title
                         + ": "
-                        + "; ".join(
+                        + tr_text("; ").join(
                             dict.fromkeys(t.error for t in book.tracks if t.error)
                         )
                         for book in unresolved
                     )
-                    + "\n\nNur geänderte oder nicht eindeutig erkennbare Reihenfolgen unter Spuren & Reihenfolge prüfen und bestätigen. Defekte Audiodateien müssen separat behoben werden."
+                    + tr_text(
+                        "\n\nNur geänderte oder nicht eindeutig erkennbare Reihenfolgen unter Spuren & Reihenfolge prüfen und bestätigen. Defekte Audiodateien müssen separat behoben werden."
+                    )
                 )
             naming = [(book, self.settings.profile().render(book)) for book in books]
             models = [n["model"].casefold() for _, n in naming]
@@ -295,13 +353,16 @@ class MainWindow(QMainWindow):
             ]
             if len(set(models)) != len(models) or len(set(files)) != len(files):
                 raise ValueError(
-                    "Modellkennungen oder Audio-Zielpfade kollidieren. Bitte Namensprofil korrigieren."
+                    tr_text(
+                        "Modellkennungen oder Audio-Zielpfade kollidieren. Bitte Namensprofil korrigieren."
+                    )
                 )
             for job in self.store.jobs():
-                if (
-                    job["status"] in {"Wartet", "Aktiv", "Unterbrochen"}
-                    and job["kind"] == "Import"
-                ):
+                if job["status"] in {
+                    tr_text("Wartet"),
+                    tr_text("Aktiv"),
+                    tr_text("Unterbrochen"),
+                } and job["kind"] == tr_text("Import"):
                     payload = json.loads(job["payload"])
                     from .domain import NamingProfile
 
@@ -310,14 +371,18 @@ class MainWindow(QMainWindow):
                     )
                     if queued["model"].casefold() in models:
                         raise ValueError(
-                            "Für diese Modellkennung besteht bereits ein offener Auftrag: "
+                            tr_text(
+                                "Für diese Modellkennung besteht bereits ein offener Auftrag: "
+                            )
                             + queued["model"]
                         )
         except Exception as exc:
-            QMessageBox.warning(self, "Importvorschau", str(exc))
+            _ui(QMessageBox, "warning", self, tr_text("Importvorschau"), str(exc))
             return
-        self.statusBar().showMessage(
-            "Serverbestand wird für die Importvorschau gelesen …"
+        _ui(
+            self.statusBar(),
+            "showMessage",
+            tr_text("Serverbestand wird für die Importvorschau gelesen …"),
         )
 
         def read(_):
@@ -329,41 +394,59 @@ class MainWindow(QMainWindow):
             for book, names in naming:
                 matches = [m for m in models if m.get("model") == names["model"]]
                 action = (
-                    "Neu"
+                    tr_text("Neu")
                     if not matches
-                    else "Vorhanden – Audio und Daten werden geprüft, Abweichungen aktualisiert"
+                    else tr_text(
+                        "Vorhanden – Audio und Daten werden geprüft, Abweichungen aktualisiert"
+                    )
                 )
                 if len(matches) > 1:
-                    QMessageBox.warning(
-                        self, "Import", "Doppelte Serverkennung: " + names["model"]
+                    _ui(
+                        QMessageBox,
+                        "warning",
+                        self,
+                        tr_text("Import"),
+                        tr_text("Doppelte Serverkennung: ") + names["model"],
                     )
                     return
-                book.status = "Vorhanden" if matches else "Neu"
+                book.status = tr_text("Vorhanden") if matches else tr_text("Neu")
                 lines += [
-                    f"{book.title} · {action}",
-                    f"  Modell: {names['model']}",
-                    f"  Audio: {names['audio_folder']}/{names['filename']}.taf",
-                    f"  Cover: {book.cover or 'Fehlt – Import erfolgt trotzdem'}",
+                    _f("{p0} · {p1}", p0=book.title, p1=tr_text(action)),
+                    _f("  Modell: {p0}", p0=names["model"]),
+                    _f(
+                        "  Audio: {p0}/{p1}.taf",
+                        p0=names["audio_folder"],
+                        p1=names["filename"],
+                    ),
+                    _f(
+                        "  Cover: {p0}",
+                        p0=book.cover or tr_text("Fehlt – Import erfolgt trotzdem"),
+                    ),
                     "",
                 ]
             dialog = QDialog(self)
-            dialog.setWindowTitle("Importvorschau")
+            _ui(dialog, "setWindowTitle", tr_text("Importvorschau"))
             dialog.resize(900, 600)
             layout = QVBoxLayout(dialog)
-            text = QPlainTextEdit("\n".join(lines))
+            text = _new(QPlainTextEdit, tr_text("\n").join(lines))
             text.setReadOnly(True)
             layout.addWidget(text)
             layout.addWidget(
-                QLabel(
-                    "Nur diese Modelle werden bearbeitet. Keine RFID-Zuordnung. Erfolg erst nach vollständiger Prüfung."
+                _new(
+                    QLabel,
+                    tr_text(
+                        "Nur diese Modelle werden bearbeitet. Keine RFID-Zuordnung. Erfolg erst nach vollständiger Prüfung."
+                    ),
                 )
             )
             buttons = QDialogButtonBox(
                 QDialogButtonBox.StandardButton.Ok
                 | QDialogButtonBox.StandardButton.Cancel
             )
-            buttons.button(QDialogButtonBox.StandardButton.Ok).setText(
-                "Importaufträge erstellen"
+            _ui(
+                buttons.button(QDialogButtonBox.StandardButton.Ok),
+                "setText",
+                tr_text("Importaufträge erstellen"),
             )
             buttons.accepted.connect(dialog.accept)
             buttons.rejected.connect(dialog.reject)
@@ -371,7 +454,7 @@ class MainWindow(QMainWindow):
             if dialog.exec():
                 for book, _ in naming:
                     self.store.add_job(
-                        "Import",
+                        tr_text("Import"),
                         {
                             "book": book.to_dict(),
                             "settings": asdict(self.settings),
@@ -379,7 +462,9 @@ class MainWindow(QMainWindow):
                         },
                     )
                 self.jobs_added()
-            self.statusBar().showMessage("Importvorschau abgeschlossen")
+            _ui(
+                self.statusBar(), "showMessage", tr_text("Importvorschau abgeschlossen")
+            )
 
         background(self, read, show)
 
@@ -399,18 +484,18 @@ class MainWindow(QMainWindow):
             self.cloud_page.refresh()
         latest = {}
         for entry in self.store.jobs():
-            if entry["kind"] in {"Import", "Prüfung"}:
+            if entry["kind"] in {tr_text("Import"), tr_text("Prüfung")}:
                 identifier = json.loads(entry["payload"])["book"]["id"]
                 latest.setdefault(identifier, entry)
         for book in self.collection.books:
             entry = latest.get(book.id)
             if entry:
                 status = (
-                    "Bestätigt"
-                    if entry["status"] == "Bestätigt"
+                    tr_text("Bestätigt")
+                    if entry["status"] == tr_text("Bestätigt")
                     else (
-                        "Prüfen"
-                        if entry["status"] == "Fehlgeschlagen"
+                        tr_text("Prüfen")
+                        if entry["status"] == tr_text("Fehlgeschlagen")
                         else entry["status"]
                     )
                 )
@@ -448,20 +533,27 @@ class MainWindow(QMainWindow):
             self._close_prompt_open = True
             try:
                 dialog = QMessageBox(self)
-                dialog.setWindowTitle("Laufende Aufträge abbrechen?")
+                _ui(dialog, "setWindowTitle", tr_text("Laufende Aufträge abbrechen?"))
                 dialog.setIcon(QMessageBox.Icon.Warning)
-                dialog.setText("Es werden noch Aufträge verarbeitet.")
+                _ui(dialog, "setText", tr_text("Es werden noch Aufträge verarbeitet."))
                 dialog.setInformativeText(
-                    "Beim Beenden werden die Warteschlange und laufende Konverter abgebrochen. "
-                    "Temporäre Audiodaten werden bereinigt. Bereits gespeicherte Dateien "
-                    "und TeddyCloud-Inhalte bleiben erhalten."
+                    tr_text(
+                        "Beim Beenden werden die Warteschlange und laufende Konverter abgebrochen. "
+                        "Temporäre Audiodaten werden bereinigt. Bereits gespeicherte Dateien "
+                        "und TeddyCloud-Inhalte bleiben erhalten."
+                    )
                 )
-                abort = dialog.addButton(
-                    "Aufträge abbrechen und beenden",
+                abort = _ui(
+                    dialog,
+                    "addButton",
+                    tr_text("Aufträge abbrechen und beenden"),
                     QMessageBox.ButtonRole.DestructiveRole,
                 )
-                keep = dialog.addButton(
-                    "Programm weiter ausführen", QMessageBox.ButtonRole.RejectRole
+                keep = _ui(
+                    dialog,
+                    "addButton",
+                    tr_text("Programm weiter ausführen"),
+                    QMessageBox.ButtonRole.RejectRole,
                 )
                 dialog.setDefaultButton(keep)
                 dialog.setEscapeButton(keep)
@@ -476,14 +568,22 @@ class MainWindow(QMainWindow):
             self.centralWidget().setEnabled(False)
             self.worker.cancel_all()
         if self._closing_when_idle and (self.worker.running or self._background_busy()):
-            self.statusBar().showMessage(
-                "Aufträge werden abgebrochen und Arbeitsdateien bereinigt. Die Anwendung schließt anschließend automatisch."
+            _ui(
+                self.statusBar(),
+                "showMessage",
+                tr_text(
+                    "Aufträge werden abgebrochen und Arbeitsdateien bereinigt. Die Anwendung schließt anschließend automatisch."
+                ),
             )
             self._shutdown_timer.start()
             event.ignore()
             return
         if self._background_busy():
-            self.statusBar().showMessage("Bitte den laufenden Vorgang abwarten.")
+            _ui(
+                self.statusBar(),
+                "showMessage",
+                tr_text("Bitte den laufenden Vorgang abwarten."),
+            )
             event.ignore()
             return
         self.settings.save()
@@ -506,7 +606,7 @@ def main():
             window.show()
             return app.exec()
     except Exception as exc:
-        QMessageBox.critical(None, "TeddyShelf", str(exc))
+        _ui(QMessageBox, "critical", None, "TeddyShelf", str(exc))
         return 1
 
 

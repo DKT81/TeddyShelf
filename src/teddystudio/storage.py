@@ -64,7 +64,7 @@ class Settings:
     ffmpeg: str = ""
     ffprobe: str = ""
     theme: str = "System"
-    language: str = "Deutsch"
+    language: str = "de"
     reopen_collection: bool = True
     show_unfinished: bool = True
     last_collection: str = ""

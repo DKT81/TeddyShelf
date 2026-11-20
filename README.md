@@ -59,6 +59,8 @@ Modellkennungen, sichtbare Titel, Dateinamen und Zielordner mit Vorlagen konfigu
 
 ## Starten
 
+**Deutsch und Englisch:** Unter **Einstellungen → Allgemein → Sprache** lässt sich die Oberfläche ohne Neustart umschalten. Die Auswahl wird gespeichert. Weitere Sprachen können über separate JSON-Dateien ergänzt werden; Anleitung und Dateiformat stehen unter [Übersetzungen](docs/TRANSLATIONS.md). Eigene Titel, Metadaten und Dateinamen werden nicht übersetzt.
+
 TeddyShelf hieß bisher TeddyStudio. Vorhandene Einstellungen und Sammlungsdaten werden weiterhin aus `%LOCALAPPDATA%/TeddyStudio` geladen, wenn dort eine bisherige Installation vorhanden ist und im neuen Datenordner noch keine eigene Konfiguration liegt. Neue Installationen verwenden `%LOCALAPPDATA%/TeddyShelf`. `TEDDYSHELF_DATA` hat Vorrang; das bisherige `TEDDYSTUDIO_DATA` wird weiterhin unterstützt. Interne Python-Importpfade und vorhandene Export-Manifeste behalten aus Kompatibilitätsgründen ihren bisherigen technischen Namen.
 
 Das portable Windows-Paket vollständig entpacken und **TeddyShelf.exe** öffnen. Python und TonieToolbox müssen nicht installiert sein. FFmpeg, FFprobe, Qt und die benötigten Python-Bibliotheken werden mitgeliefert. Einstellungen und Aufträge liegen unter `%LOCALAPPDATA%/TeddyShelf`; ein anderer Datenordner kann über `TEDDYSHELF_DATA` gewählt werden.

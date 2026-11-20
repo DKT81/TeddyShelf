@@ -1,5 +1,8 @@
 """Settings pages and editable naming profiles with a real rendering preview."""
 
+from .i18n import text as tr_text, format_text as _f
+from .i18n_widgets import call as _ui, create as _new
+
 from dataclasses import asdict
 from pathlib import Path
 import json
@@ -39,14 +42,17 @@ class SettingsPage(QWidget):
         self.controls = {}
         self.preview_book = Book(
             "demo",
-            "Sternenfreunde/001-Das leuchtende Tal",
-            "Das leuchtende Tal",
-            "Sternenfreunde",
+            tr_text("Sternenfreunde/001-Das leuchtende Tal"),
+            tr_text("Das leuchtende Tal"),
+            tr_text("Sternenfreunde"),
             1,
         )
         outer = QVBoxLayout(self)
         outer.addWidget(
-            heading("Einstellungen", "Verbindung, Arbeitsordner und Standardverhalten")
+            heading(
+                tr_text("Einstellungen"),
+                tr_text("Verbindung, Arbeitsordner und Standardverhalten"),
+            )
         )
         body = QHBoxLayout()
         outer.addLayout(body)
@@ -57,16 +63,16 @@ class SettingsPage(QWidget):
         body.addWidget(self.stack, 1)
         self.pages = {}
         for name in [
-            "Allgemein",
-            "TeddyCloud",
-            "Namen & Metadaten",
-            "Cover",
-            "Audio & Schnitt",
-            "Speicherorte",
-            "Importregeln",
-            "Protokolle",
+            tr_text("Allgemein"),
+            tr_text("TeddyCloud"),
+            tr_text("Namen & Metadaten"),
+            tr_text("Cover"),
+            tr_text("Audio & Schnitt"),
+            tr_text("Speicherorte"),
+            tr_text("Importregeln"),
+            tr_text("Protokolle"),
         ]:
-            self.navigation.addItem(name)
+            _ui(self.navigation, "addItem", name)
             content = QWidget()
             form = QFormLayout(content)
             form.setSpacing(14)
@@ -77,169 +83,300 @@ class SettingsPage(QWidget):
             self.pages[name] = form
         self.navigation.currentRowChanged.connect(self.stack.setCurrentIndex)
         self.navigation.setCurrentRow(0)
-        self.add_combo("Allgemein", "theme", "Design", ["System", "Hell", "Dunkel"])
-        self.add_combo("Allgemein", "language", "Sprache", ["Deutsch"])
+        self.add_combo(
+            tr_text("Allgemein"),
+            "theme",
+            tr_text("Design"),
+            [tr_text("System"), tr_text("Hell"), tr_text("Dunkel")],
+        )
+        from .i18n import manager
+
+        language = _new(QComboBox)
+        language.setProperty("i18nUserContent", True)
+        for code, native_name in manager.available():
+            language.addItem(native_name, code)
+        language.setCurrentIndex(
+            language.findData(manager.normalize(settings.language))
+        )
+        self.controls["language"] = language
+        _ui(self.pages["Allgemein"], "addRow", tr_text("Sprache"), language)
+        language.currentIndexChanged.connect(self.change_language)
         self.add_spin(
-            "Allgemein",
+            tr_text("Allgemein"),
             "parallel_jobs",
-            "Gleichzeitige Aufträge / Konvertierungen",
+            tr_text("Gleichzeitige Aufträge / Konvertierungen"),
             1,
             16,
         )
         import os
 
         cores = os.cpu_count() or 1
-        parallel_help = QLabel(
-            f"{cores} logische CPU-Kerne erkannt. Vorsichtiger Startwert: {max(1,min(4,cores//2))}.\n1 = nacheinander. Mehr Aufträge benötigen mehr CPU, RAM und Datenträgerleistung.\nÜbertragungen und Modelländerungen laufen je TeddyCloud-Ziel nacheinander.\nÄnderungen gelten für die nächsten freien Plätze, auch bei bereits wartenden Aufträgen."
+        parallel_help = _new(
+            QLabel,
+            _f(
+                "{p0} logische CPU-Kerne erkannt. Vorsichtiger Startwert: {p1}.\n1 = nacheinander. Mehr Aufträge benötigen mehr CPU, RAM und Datenträgerleistung.\nÜbertragungen und Modelländerungen laufen je TeddyCloud-Ziel nacheinander.\nÄnderungen gelten für die nächsten freien Plätze, auch bei bereits wartenden Aufträgen.",
+                p0=cores,
+                p1=max(1, min(4, cores // 2)),
+            ),
         )
         parallel_help.setWordWrap(True)
-        self.pages["Allgemein"].addRow(parallel_help)
+        _ui(self.pages[tr_text("Allgemein")], "addRow", parallel_help)
         self.add_check(
-            "Allgemein", "reopen_collection", "Letzte Sammlung beim Start öffnen"
+            tr_text("Allgemein"),
+            "reopen_collection",
+            tr_text("Letzte Sammlung beim Start öffnen"),
         )
         self.add_check(
-            "Allgemein", "show_unfinished", "Unerledigte Aufträge beim Start anzeigen"
+            tr_text("Allgemein"),
+            "show_unfinished",
+            tr_text("Unerledigte Aufträge beim Start anzeigen"),
         )
-        self.pages["Allgemein"].addRow(
-            button("Namensprofile bearbeiten", lambda: self.navigation.setCurrentRow(2))
+        _ui(
+            self.pages[tr_text("Allgemein")],
+            "addRow",
+            button(
+                tr_text("Namensprofile bearbeiten"),
+                lambda: self.navigation.setCurrentRow(2),
+            ),
         )
-        self.add_text("TeddyCloud", "url", "Adresse")
-        self.add_check("TeddyCloud", "verify_tls", "TLS-Zertifikat prüfen")
+        self.add_text(tr_text("TeddyCloud"), "url", tr_text("Adresse"))
+        self.add_check(
+            tr_text("TeddyCloud"), "verify_tls", tr_text("TLS-Zertifikat prüfen")
+        )
         self.add_text(
-            "TeddyCloud", "ca_file", "Eigenes CA-Zertifikat (optional)", file=True
+            tr_text("TeddyCloud"),
+            "ca_file",
+            tr_text("Eigenes CA-Zertifikat (optional)"),
+            file=True,
         )
-        self.connection_status = QLabel("Noch nicht geprüft")
-        self.pages["TeddyCloud"].addRow(
+        self.connection_status = _new(QLabel, tr_text("Noch nicht geprüft"))
+        _ui(
+            self.pages[tr_text("TeddyCloud")],
+            "addRow",
             row(
-                button("Verbindung testen", self.test_connection),
+                button(tr_text("Verbindung testen"), self.test_connection),
                 self.connection_status,
-            )
+            ),
         )
-        self.pages["TeddyCloud"].addRow(
-            QLabel(
-                "Bei selbstsigniertem LAN-Zertifikat eigene CA wählen oder die Prüfung gezielt ausschalten."
-            )
+        _ui(
+            self.pages[tr_text("TeddyCloud")],
+            "addRow",
+            _new(
+                QLabel,
+                tr_text(
+                    "Bei selbstsigniertem LAN-Zertifikat eigene CA wählen oder die Prüfung gezielt ausschalten."
+                ),
+            ),
         )
         self.build_profiles()
         self.cover_order = QListWidget()
-        self.cover_order.addItems(settings.cover_sources)
-        self.pages["Cover"].addRow("Quellen in Prioritätsreihenfolge", self.cover_order)
-        self.pages["Cover"].addRow(
+        _ui(
+            self.cover_order,
+            "addItems",
+            [tr_text(value) for value in settings.cover_sources],
+        )
+        _ui(
+            self.pages[tr_text("Cover")],
+            "addRow",
+            tr_text("Quellen in Prioritätsreihenfolge"),
+            self.cover_order,
+        )
+        _ui(
+            self.pages[tr_text("Cover")],
+            "addRow",
             row(
-                button("Nach oben", lambda: self.move_source(-1)),
-                button("Nach unten", lambda: self.move_source(1)),
-            )
+                button(tr_text("Nach oben"), lambda: self.move_source(-1)),
+                button(tr_text("Nach unten"), lambda: self.move_source(1)),
+            ),
         )
         self.add_check(
-            "Cover",
+            tr_text("Cover"),
             "preserve_manual_cover",
-            "Manuell bestätigte Cover beim Neueinlesen erhalten",
+            tr_text("Manuell bestätigte Cover beim Neueinlesen erhalten"),
         )
         self.add_combo(
-            "Cover",
+            tr_text("Cover"),
             "cover_missing",
-            "Wenn ein Cover fehlt",
-            ["Leer lassen", "Neutrales Symbol"],
+            tr_text("Wenn ein Cover fehlt"),
+            [tr_text("Leer lassen"), tr_text("Neutrales Symbol")],
         )
-        self.add_combo("Cover", "cover_format", "Bildformat", ["JPG", "PNG"])
-        self.add_spin("Cover", "cover_size", "Maximale Kantenlänge", 64, 4000)
-        self.add_check("Cover", "cover_upscale", "Kleine Bilder vergrößern")
+        self.add_combo(
+            tr_text("Cover"),
+            "cover_format",
+            tr_text("Bildformat"),
+            [tr_text("JPG"), tr_text("PNG")],
+        )
+        self.add_spin(
+            tr_text("Cover"), "cover_size", tr_text("Maximale Kantenlänge"), 64, 4000
+        )
         self.add_check(
-            "Cover", "embed_cover", "Cover in exportierte Audiodateien einbetten"
+            tr_text("Cover"), "cover_upscale", tr_text("Kleine Bilder vergrößern")
         )
-        self.pages["Cover"].addRow(
-            QLabel(
-                "Seitenverhältnis bleibt erhalten. Online-Cover benötigen immer eine ausdrückliche Zuordnung."
-            )
+        self.add_check(
+            tr_text("Cover"),
+            "embed_cover",
+            tr_text("Cover in exportierte Audiodateien einbetten"),
+        )
+        _ui(
+            self.pages[tr_text("Cover")],
+            "addRow",
+            _new(
+                QLabel,
+                tr_text(
+                    "Seitenverhältnis bleibt erhalten. Online-Cover benötigen immer eine ausdrückliche Zuordnung."
+                ),
+            ),
         )
         from .media import AUDIO_MODES
 
         self.add_combo(
-            "Audio & Schnitt", "audio_mode", "Standard-Verarbeitung", AUDIO_MODES
+            tr_text("Audio & Schnitt"),
+            "audio_mode",
+            tr_text("Standard-Verarbeitung"),
+            AUDIO_MODES,
         )
-        self.pages["Audio & Schnitt"].addRow(
-            QLabel(
-                "TAF als Playlist: jede Quelldatei vollständig als eigenes Kapitel, ohne Zeitschnitt.\n"
-                "Audio wird für TAF konvertiert; Originaldateien bleiben unverändert."
-            )
+        _ui(
+            self.pages[tr_text("Audio & Schnitt")],
+            "addRow",
+            _new(
+                QLabel,
+                tr_text(
+                    "TAF als Playlist: jede Quelldatei vollständig als eigenes Kapitel, ohne Zeitschnitt.\n"
+                    "Audio wird für TAF konvertiert; Originaldateien bleiben unverändert."
+                ),
+            ),
         )
         self.add_combo(
-            "Audio & Schnitt",
+            tr_text("Audio & Schnitt"),
             "audio_format",
-            "Standardformat",
+            tr_text("Standardformat"),
             ["mp3", "opus", "flac", "wav"],
         )
         self.add_spin(
-            "Audio & Schnitt", "audio_bitrate", "Export-Bitrate (kbit/s)", 32, 320
+            tr_text("Audio & Schnitt"),
+            "audio_bitrate",
+            tr_text("Export-Bitrate (kbit/s)"),
+            32,
+            320,
         )
-        self.add_spin("Audio & Schnitt", "taf_bitrate", "TAF-Bitrate (kbit/s)", 32, 128)
         self.add_spin(
-            "Audio & Schnitt",
+            tr_text("Audio & Schnitt"),
+            "taf_bitrate",
+            tr_text("TAF-Bitrate (kbit/s)"),
+            32,
+            128,
+        )
+        self.add_spin(
+            tr_text("Audio & Schnitt"),
             "split_seconds",
-            "Standard-Abschnittslänge (Sekunden)",
+            tr_text("Standard-Abschnittslänge (Sekunden)"),
             1,
             86400,
         )
         self.add_spin(
-            "Audio & Schnitt",
+            tr_text("Audio & Schnitt"),
             "timeout",
-            "Zeitlimit pro Audioschritt (Sekunden)",
+            tr_text("Zeitlimit pro Audioschritt (Sekunden)"),
             30,
             86400,
         )
         self.add_text(
-            "Audio & Schnitt", "ffmpeg", "FFmpeg (leer = mitgeliefert)", file=True
+            tr_text("Audio & Schnitt"),
+            "ffmpeg",
+            tr_text("FFmpeg (leer = mitgeliefert)"),
+            file=True,
         )
         self.add_text(
-            "Audio & Schnitt", "ffprobe", "FFprobe (leer = mitgeliefert)", file=True
+            tr_text("Audio & Schnitt"),
+            "ffprobe",
+            tr_text("FFprobe (leer = mitgeliefert)"),
+            file=True,
         )
-        self.add_text("Speicherorte", "source", "Standard-Quellordner", directory=True)
-        self.add_text("Speicherorte", "export", "Arbeits-/Exportordner", directory=True)
         self.add_text(
-            "Speicherorte",
+            tr_text("Speicherorte"),
+            "source",
+            tr_text("Standard-Quellordner"),
+            directory=True,
+        )
+        self.add_text(
+            tr_text("Speicherorte"),
+            "export",
+            tr_text("Arbeits-/Exportordner"),
+            directory=True,
+        )
+        self.add_text(
+            tr_text("Speicherorte"),
             "download_destination",
-            "TeddyCloud-Downloads",
+            tr_text("TeddyCloud-Downloads"),
             directory=True,
         )
         self.add_combo(
-            "Importregeln",
+            tr_text("Importregeln"),
             "existing",
-            "Vorhandene Modelle",
-            ["Prüfen und aktualisieren", "Bei vorhandenem Modell stoppen"],
+            tr_text("Vorhandene Modelle"),
+            [
+                tr_text("Prüfen und aktualisieren"),
+                tr_text("Bei vorhandenem Modell stoppen"),
+            ],
         )
-        self.pages["Importregeln"].addRow(
-            QLabel(
-                "Immer aktiv: vollständige Audio- und Serverprüfung, ASCII-Pfade, keine RFID-Zuordnung.\nKeine automatischen Importe beim Programmstart."
-            )
+        _ui(
+            self.pages[tr_text("Importregeln")],
+            "addRow",
+            _new(
+                QLabel,
+                tr_text(
+                    "Immer aktiv: vollständige Audio- und Serverprüfung, ASCII-Pfade, keine RFID-Zuordnung.\nKeine automatischen Importe beim Programmstart."
+                ),
+            ),
         )
         from .storage import data_directory
 
-        self.pages["Protokolle"].addRow("Datenordner", QLabel(str(data_directory())))
-        self.pages["Protokolle"].addRow(
-            button("Temporäre Audiodaten bereinigen", self.clean_audio_work)
+        _ui(
+            self.pages[tr_text("Protokolle")],
+            "addRow",
+            tr_text("Datenordner"),
+            _new(QLabel, str(data_directory())),
         )
-        self.pages["Protokolle"].addRow(
-            QLabel(
-                "PCM-Arbeitsaudio wird nach jedem Versuch und beim Start bereinigt.\n"
-                "Laufende Aufträge bleiben geschützt; bei Wiederaufnahme wird Audio neu dekodiert."
-            )
+        _ui(
+            self.pages[tr_text("Protokolle")],
+            "addRow",
+            button(tr_text("Temporäre Audiodaten bereinigen"), self.clean_audio_work),
         )
-        self.pages["Protokolle"].addRow(
-            QLabel(
-                "Aufträge enthalten einzelne Protokolle und einen exportierbaren Gesamtverlauf.\nFehler werden dauerhaft aufbewahrt; keine automatische Löschung."
-            )
+        _ui(
+            self.pages[tr_text("Protokolle")],
+            "addRow",
+            _new(
+                QLabel,
+                tr_text(
+                    "PCM-Arbeitsaudio wird nach jedem Versuch und beim Start bereinigt.\n"
+                    "Laufende Aufträge bleiben geschützt; bei Wiederaufnahme wird Audio neu dekodiert."
+                ),
+            ),
+        )
+        _ui(
+            self.pages[tr_text("Protokolle")],
+            "addRow",
+            _new(
+                QLabel,
+                tr_text(
+                    "Aufträge enthalten einzelne Protokolle und einen exportierbaren Gesamtverlauf.\nFehler werden dauerhaft aufbewahrt; keine automatische Löschung."
+                ),
+            ),
         )
         outer.addWidget(
-            QLabel(
-                "Inhaltsvorgaben gelten für neue Aufträge. Parallelität steuert sofort die nächsten freien Plätze."
+            _new(
+                QLabel,
+                tr_text(
+                    "Inhaltsvorgaben gelten für neue Aufträge. Parallelität steuert sofort die nächsten freien Plätze."
+                ),
             )
         )
         outer.addWidget(
             row(
-                button("Profil exportieren", self.export_settings),
-                button("Profil importieren", self.import_settings),
-                button("Änderungen verwerfen", self.reload),
-                button("Einstellungen speichern", self.save, True),
+                button(tr_text("Profil exportieren"), self.export_settings),
+                button(tr_text("Profil importieren"), self.import_settings),
+                button(tr_text("Änderungen verwerfen"), self.reload),
+                button(tr_text("Einstellungen speichern"), self.save, True),
             )
         )
 
@@ -248,19 +385,33 @@ class SettingsPage(QWidget):
         from .workspace import clean_inactive
 
         count, size, errors = clean_inactive(data_directory() / "work")
-        message = f"{count} temporäre PCM-Dateien entfernt · {size / 1048576:.1f} MiB freigegeben."
+        message = _f(
+            "{p0} temporäre PCM-Dateien entfernt · {p1:.1f} MiB freigegeben.",
+            p0=count,
+            p1=size / 1048576,
+        )
         if errors:
-            message += "\nNicht entfernt:\n" + "\n".join(errors[:10])
-        QMessageBox.information(self, "Arbeitsdateien bereinigt", message)
+            message += tr_text("\nNicht entfernt:\n") + tr_text("\n").join(errors[:10])
+        _ui(
+            QMessageBox,
+            "information",
+            self,
+            tr_text("Arbeitsdateien bereinigt"),
+            message,
+        )
 
     def add_text(self, page, key, label, file=False, directory=False):
-        control = QLineEdit(str(getattr(self.settings, key)))
+        control = _new(QLineEdit, str(getattr(self.settings, key)))
         if key == "url":
-            control.setPlaceholderText(
-                "http://teddycloud.example – eigene Serveradresse eintragen"
+            _ui(
+                control,
+                "setPlaceholderText",
+                "http://teddycloud.example – eigene Serveradresse eintragen",
             )
         self.controls[key] = control
-        self.pages[page].addRow(
+        _ui(
+            self.pages[page],
+            "addRow",
             label,
             (
                 path_control(control, self, directory=directory)
@@ -270,110 +421,122 @@ class SettingsPage(QWidget):
         )
 
     def add_check(self, page, key, label):
-        control = QCheckBox(label)
+        control = _new(QCheckBox, label)
         control.setChecked(getattr(self.settings, key))
         self.controls[key] = control
-        self.pages[page].addRow(control)
+        _ui(self.pages[page], "addRow", control)
 
     def add_combo(self, page, key, label, values):
-        control = QComboBox()
-        control.addItems(values)
+        control = _new(QComboBox)
+        _ui(control, "addItems", values)
         control.setCurrentText(str(getattr(self.settings, key)))
         self.controls[key] = control
-        self.pages[page].addRow(label, control)
+        _ui(self.pages[page], "addRow", label, control)
 
     def add_spin(self, page, key, label, minimum, maximum):
         control = QSpinBox()
         control.setRange(minimum, maximum)
         control.setValue(getattr(self.settings, key))
         self.controls[key] = control
-        self.pages[page].addRow(label, control)
+        _ui(self.pages[page], "addRow", label, control)
 
     def move_source(self, delta):
         index = self.cover_order.currentRow()
         target = index + delta
         if 0 <= target < self.cover_order.count():
-            self.cover_order.insertItem(target, self.cover_order.takeItem(index))
+            _ui(
+                self.cover_order, "insertItem", target, self.cover_order.takeItem(index)
+            )
             self.cover_order.setCurrentRow(target)
 
     def build_profiles(self):
-        form = self.pages["Namen & Metadaten"]
+        form = self.pages[tr_text("Namen & Metadaten")]
         self.profiles = [asdict(NamingProfile(**x)) for x in self.settings.profiles]
-        self.profile_choice = QComboBox()
-        self.profile_choice.addItems([p["name"] for p in self.profiles])
+        self.profile_choice = _new(QComboBox)
+        self.profile_choice.setProperty("i18nUserContent", True)
+        _ui(self.profile_choice, "addItems", [p["name"] for p in self.profiles])
         self.profile_choice.setCurrentIndex(self.settings.default_profile)
         self.profile_index = self.settings.default_profile
-        form.addRow("Standardprofil", self.profile_choice)
-        form.addRow(
+        _ui(form, "addRow", tr_text("Standardprofil"), self.profile_choice)
+        _ui(
+            form,
+            "addRow",
             row(
-                button("Neues Profil", self.new_profile),
-                button("Profil kopieren", self.copy_profile),
-                button("Profil löschen", self.delete_profile),
-            )
+                button(tr_text("Neues Profil"), self.new_profile),
+                button(tr_text("Profil kopieren"), self.copy_profile),
+                button(tr_text("Profil löschen"), self.delete_profile),
+            ),
         )
         self.profile_controls = {}
         self.source_controls = {}
         for key, label, options in [
             (
                 "title_source",
-                "Titelquelle",
+                tr_text("Titelquelle"),
                 [
-                    "Erkannter Titel",
-                    "Album",
-                    "Audiotag Titel",
-                    "Ordnername",
-                    "Dateiname",
+                    tr_text("Erkannter Titel"),
+                    tr_text("Album"),
+                    tr_text("Audiotag Titel"),
+                    tr_text("Ordnername"),
+                    tr_text("Dateiname"),
                 ],
             ),
             (
                 "series_source",
-                "Serienquelle",
+                tr_text("Serienquelle"),
                 [
-                    "Erkannte Serie",
-                    "Ordner oder Album",
-                    "Album",
-                    "Übergeordneter Ordner",
-                    "Keine Serie",
+                    tr_text("Erkannte Serie"),
+                    tr_text("Ordner oder Album"),
+                    tr_text("Album"),
+                    tr_text("Übergeordneter Ordner"),
+                    tr_text("Keine Serie"),
                 ],
             ),
             (
                 "episode_source",
-                "Folgenquelle",
-                ["Erkannte Folge", "Nummer aus Dateiname"],
+                tr_text("Folgenquelle"),
+                [tr_text("Erkannte Folge"), tr_text("Nummer aus Dateiname")],
             ),
         ]:
-            control = QComboBox()
-            control.addItems(options)
+            control = _new(QComboBox)
+            _ui(control, "addItems", options)
             control.setCurrentText(self.profiles[self.profile_index][key])
             control.currentTextChanged.connect(self.preview)
             self.source_controls[key] = control
-            form.addRow(label, control)
+            _ui(form, "addRow", label, control)
         labels = {
-            "name": "Profilname",
-            "model_numbered": "Modellkennung mit Folge",
-            "model_unnumbered": "Modellkennung ohne Folge",
-            "title": "Sichtbarer Titel",
-            "series": "Serie",
-            "episodes": "Episodentext",
-            "filename": "Audio-Dateiname",
-            "audio_folder": "Audio-Zielordner",
-            "image_folder": "Cover-Zielordner",
-            "split_filename": "Teil-Dateiname",
-            "language": "Sprache",
-            "category": "Kategorie",
+            "name": tr_text("Profilname"),
+            "model_numbered": tr_text("Modellkennung mit Folge"),
+            "model_unnumbered": tr_text("Modellkennung ohne Folge"),
+            "title": tr_text("Sichtbarer Titel"),
+            "series": tr_text("Serie"),
+            "episodes": tr_text("Episodentext"),
+            "filename": tr_text("Audio-Dateiname"),
+            "audio_folder": tr_text("Audio-Zielordner"),
+            "image_folder": tr_text("Cover-Zielordner"),
+            "split_filename": tr_text("Teil-Dateiname"),
+            "language": tr_text("Sprache"),
+            "category": tr_text("Kategorie"),
         }
         for key, label in labels.items():
-            edit = QLineEdit(self.profiles[self.profile_index][key])
+            edit = _new(QLineEdit, self.profiles[self.profile_index][key])
             edit.textChanged.connect(self.preview)
             self.profile_controls[key] = edit
-            form.addRow(label, edit)
-        form.addRow(
-            QLabel(
-                "Variablen: {serie}, {titel}, {folge:03}, {serie_slug}, {titel_slug},\n{serie_ordner}, {titel_ascii}, {modell}, {teil:03}, {sprache}, {kategorie}\nFolge, Teil und Track sind getrennte Angaben."
-            )
+            _ui(form, "addRow", label, edit)
+        _ui(
+            form,
+            "addRow",
+            _new(
+                QLabel,
+                tr_text(
+                    "Variablen: {serie}, {titel}, {folge:03}, {serie_slug}, {titel_slug},\n{serie_ordner}, {titel_ascii}, {modell}, {teil:03}, {sprache}, {kategorie}\nFolge, Teil und Track sind getrennte Angaben."
+                ),
+            ),
         )
-        self.variable = QComboBox()
-        self.variable.addItems(
+        self.variable = _new(QComboBox)
+        _ui(
+            self.variable,
+            "addItems",
             [
                 "{serie}",
                 "{titel}",
@@ -387,29 +550,31 @@ class SettingsPage(QWidget):
                 "{datum}",
                 "{ordner}",
                 "{dateiname}",
-            ]
+            ],
         )
-        self.template_target = QComboBox()
-        self.template_target.addItems(list(labels.values()))
-        form.addRow(
-            "Platzhalter einfügen",
+        self.template_target = _new(QComboBox)
+        _ui(self.template_target, "addItems", list(labels.values()))
+        _ui(
+            form,
+            "addRow",
+            tr_text("Platzhalter einfügen"),
             row(
                 self.variable,
                 self.template_target,
                 button(
-                    "Einfügen",
+                    tr_text("Einfügen"),
                     lambda: self.profile_controls[
                         list(labels)[self.template_target.currentIndex()]
                     ].insert(self.variable.currentText()),
                 ),
             ),
         )
-        self.preview_cover = QLabel()
-        form.addRow("Ausgewähltes Hörspiel", self.preview_cover)
-        self.preview_label = QPlainTextEdit()
+        self.preview_cover = _new(QLabel)
+        _ui(form, "addRow", tr_text("Ausgewähltes Hörspiel"), self.preview_cover)
+        self.preview_label = _new(QPlainTextEdit)
         self.preview_label.setReadOnly(True)
         self.preview_label.setMinimumHeight(220)
-        form.addRow("Live-Vorschau (Beispiel)", self.preview_label)
+        _ui(form, "addRow", tr_text("Live-Vorschau (Beispiel)"), self.preview_label)
         self.profile_choice.currentIndexChanged.connect(self.switch_profile)
         self.preview()
 
@@ -435,22 +600,22 @@ class SettingsPage(QWidget):
         self.profiles[self.profile_index] = self.current_profile()
         self.profile_index = index
         for key, edit in self.profile_controls.items():
-            edit.setText(self.profiles[index][key])
+            _ui(edit, "setText", self.profiles[index][key])
         for key, control in self.source_controls.items():
             control.setCurrentText(self.profiles[index][key])
         self.preview()
 
     def new_profile(self):
         self.profiles[self.profile_index] = self.current_profile()
-        self.profiles.append(asdict(NamingProfile(name="Neues Profil")))
-        self.profile_choice.addItem("Neues Profil")
+        self.profiles.append(asdict(NamingProfile(name=tr_text("Neues Profil"))))
+        _ui(self.profile_choice, "addItem", tr_text("Neues Profil"))
         self.profile_choice.setCurrentIndex(len(self.profiles) - 1)
 
     def copy_profile(self):
         copied = self.current_profile()
         copied["name"] += " – Kopie"
         self.profiles.append(copied)
-        self.profile_choice.addItem(copied["name"])
+        _ui(self.profile_choice, "addItem", copied["name"])
         self.profile_choice.setCurrentIndex(len(self.profiles) - 1)
 
     def delete_profile(self):
@@ -464,7 +629,7 @@ class SettingsPage(QWidget):
         self.profile_choice.setCurrentIndex(self.profile_index)
         self.profile_choice.blockSignals(False)
         for key, edit in self.profile_controls.items():
-            edit.setText(self.profiles[self.profile_index][key])
+            _ui(edit, "setText", self.profiles[self.profile_index][key])
         for key, control in self.source_controls.items():
             control.setCurrentText(self.profiles[self.profile_index][key])
 
@@ -473,15 +638,27 @@ class SettingsPage(QWidget):
             return
         try:
             value = NamingProfile(**self.current_profile()).render(self.preview_book)
-            self.preview_label.setPlainText(
-                json.dumps(value, ensure_ascii=False, indent=2)
+            _ui(
+                self.preview_label,
+                "setPlainText",
+                json.dumps(value, ensure_ascii=False, indent=2),
             )
         except Exception as exc:
-            self.preview_label.setPlainText(str(exc))
+            _ui(self.preview_label, "setPlainText", str(exc))
+
+    def change_language(self):
+        from .i18n import manager
+
+        self.settings.language = self.controls["language"].currentData()
+        self.settings.save()
+        manager.set_language(self.settings.language)
 
     def collect(self):
         value = asdict(self.settings)
         for key, control in self.controls.items():
+            if key == "language":
+                value[key] = control.currentData()
+                continue
             value[key] = (
                 control.isChecked()
                 if isinstance(control, QCheckBox)
@@ -502,14 +679,18 @@ class SettingsPage(QWidget):
             self.cover_order.item(i).text() for i in range(self.cover_order.count())
         ]
         candidate = Settings(**value)
-        candidate.profile().render(Book("test", "", "Titel", "Serie", 1))
-        candidate.profile().render(Book("test", "", "Titel", "Serie"))
+        candidate.profile().render(
+            Book("test", "", tr_text("Titel"), tr_text("Serie"), 1)
+        )
+        candidate.profile().render(Book("test", "", tr_text("Titel"), tr_text("Serie")))
         source, export = (
             Path(candidate.source).resolve(),
             Path(candidate.export).resolve(),
         )
         if source == export or source in export.parents:
-            raise ValueError("Der Exportordner muss außerhalb des Quellordners liegen.")
+            raise ValueError(
+                tr_text("Der Exportordner muss außerhalb des Quellordners liegen.")
+            )
         return candidate
 
     def save(self):
@@ -518,19 +699,26 @@ class SettingsPage(QWidget):
             candidate.save()
             self.settings.__dict__.update(candidate.__dict__)
             for index, profile in enumerate(candidate.profiles):
-                self.profile_choice.setItemText(index, profile["name"])
+                _ui(self.profile_choice, "setItemText", index, profile["name"])
             self.saved.emit()
-            QMessageBox.information(
+            _ui(
+                QMessageBox,
+                "information",
                 self,
-                "Einstellungen",
-                "Gespeichert. Neue Aufträge verwenden diese Vorgaben.",
+                tr_text("Einstellungen"),
+                tr_text("Gespeichert. Neue Aufträge verwenden diese Vorgaben."),
             )
         except Exception as exc:
-            QMessageBox.warning(self, "Einstellungen", str(exc))
+            _ui(QMessageBox, "warning", self, tr_text("Einstellungen"), str(exc))
 
     def reload(self):
         for key, control in self.controls.items():
             value = getattr(self.settings, key)
+            if key == "language":
+                from .i18n import manager
+
+                control.setCurrentIndex(control.findData(manager.normalize(value)))
+                continue
             if isinstance(control, QCheckBox):
                 control.setChecked(value)
             elif isinstance(control, QSpinBox):
@@ -538,54 +726,67 @@ class SettingsPage(QWidget):
             elif isinstance(control, QComboBox):
                 control.setCurrentText(value)
             else:
-                control.setText(str(value))
+                _ui(control, "setText", str(value))
         self.profiles = [asdict(NamingProfile(**p)) for p in self.settings.profiles]
         self.profile_choice.blockSignals(True)
         self.profile_choice.clear()
-        self.profile_choice.addItems([p["name"] for p in self.profiles])
+        _ui(self.profile_choice, "addItems", [p["name"] for p in self.profiles])
         self.profile_index = self.settings.default_profile
         self.profile_choice.setCurrentIndex(self.profile_index)
         self.profile_choice.blockSignals(False)
         for key, edit in self.profile_controls.items():
-            edit.setText(self.profiles[self.profile_index][key])
+            _ui(edit, "setText", self.profiles[self.profile_index][key])
         for key, control in self.source_controls.items():
             control.setCurrentText(self.profiles[self.profile_index][key])
         self.cover_order.clear()
-        self.cover_order.addItems(self.settings.cover_sources)
+        _ui(
+            self.cover_order,
+            "addItems",
+            [tr_text(value) for value in self.settings.cover_sources],
+        )
 
     def export_settings(self):
-        path, _ = QFileDialog.getSaveFileName(
+        path, _ = _ui(
+            QFileDialog,
+            "getSaveFileName",
             self,
-            "Einstellungen exportieren",
+            tr_text("Einstellungen exportieren"),
             "TeddyShelf-Profil.json",
-            "JSON (*.json)",
+            tr_text("JSON (*.json)"),
         )
         if path:
             try:
                 self.collect().save(path)
             except Exception as exc:
-                QMessageBox.warning(self, "Profil", str(exc))
+                _ui(QMessageBox, "warning", self, tr_text("Profil"), str(exc))
 
     def import_settings(self):
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Einstellungen importieren", "", "JSON (*.json)"
+        path, _ = _ui(
+            QFileDialog,
+            "getOpenFileName",
+            self,
+            tr_text("Einstellungen importieren"),
+            "",
+            tr_text("JSON (*.json)"),
         )
         if path:
             try:
                 candidate = Settings.load(path)
-                candidate.profile().render(Book("test", "", "Titel", "Serie", 1))
+                candidate.profile().render(
+                    Book("test", "", tr_text("Titel"), tr_text("Serie"), 1)
+                )
                 self.settings.__dict__.update(candidate.__dict__)
                 self.reload()
             except Exception as exc:
-                QMessageBox.warning(self, "Profil", str(exc))
+                _ui(QMessageBox, "warning", self, tr_text("Profil"), str(exc))
 
     def test_connection(self):
         try:
             candidate = self.collect()
         except Exception as exc:
-            QMessageBox.warning(self, "Verbindung", str(exc))
+            _ui(QMessageBox, "warning", self, tr_text("Verbindung"), str(exc))
             return
-        self.connection_status.setText("Wird geprüft …")
+        _ui(self.connection_status, "setText", tr_text("Wird geprüft …"))
 
         def check(_):
             with TeddyCloud(candidate) as client:
@@ -594,7 +795,9 @@ class SettingsPage(QWidget):
         background(
             self,
             check,
-            lambda count: self.connection_status.setText(
-                f"Erreichbar · {count} Custom-Tonies"
+            lambda count: _ui(
+                self.connection_status,
+                "setText",
+                _f("Erreichbar · {p0} Custom-Tonies", p0=count),
             ),
         )

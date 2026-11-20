@@ -1,5 +1,8 @@
 """Per-work cover confirmation, manifest exchange and printable label PDFs."""
 
+from .i18n import text as tr_text, format_text as _f
+from .i18n_widgets import call as _ui, create as _new
+
 from pathlib import Path
 import json
 import math
@@ -39,12 +42,26 @@ class CoversPage(QWidget):
         self.book, self.pending = None, ""
         layout = QVBoxLayout(self)
         layout.addWidget(
-            heading("Cover verwalten", "Bilder prüfen, zuordnen und bearbeiten")
+            heading(
+                tr_text("Cover verwalten"),
+                tr_text("Bilder prüfen, zuordnen und bearbeiten"),
+            )
         )
-        self.filter = QComboBox()
-        self.filter.addItems(["Alle Cover", "Nur fehlende Cover", "Manuell bestätigt"])
+        self.filter = _new(QComboBox)
+        _ui(
+            self.filter,
+            "addItems",
+            [
+                tr_text("Alle Cover"),
+                tr_text("Nur fehlende Cover"),
+                tr_text("Manuell bestätigt"),
+            ],
+        )
         layout.addWidget(
-            row(self.filter, button("Cover-Vorgaben öffnen", self.open_defaults))
+            row(
+                self.filter,
+                button(tr_text("Cover-Vorgaben öffnen"), self.open_defaults),
+            )
         )
         body = QSplitter()
         body.setChildrenCollapsible(False)
@@ -58,44 +75,50 @@ class CoversPage(QWidget):
         preview_box = QVBoxLayout(preview_panel)
         body.addWidget(preview_panel)
         body.setSizes([300, 900])
-        body.handle(1).setToolTip("Ziehen, um Titelliste und Coverbereich anzupassen.")
-        self.preview = QLabel("Hörspiel auswählen")
+        _ui(
+            body.handle(1),
+            "setToolTip",
+            tr_text("Ziehen, um Titelliste und Coverbereich anzupassen."),
+        )
+        self.preview = _new(QLabel, tr_text("Hörspiel auswählen"))
         self.preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview.setMinimumSize(300, 300)
         preview_box.addWidget(self.preview, 1)
-        self.source_label = QLabel()
+        self.source_label = _new(QLabel)
         self.source_label.setWordWrap(True)
         preview_box.addWidget(self.source_label)
         preview_box.addWidget(
             row(
-                button("Einpassen", self.fit),
-                button("Zuschneiden", self.crop),
-                button("Drehen", self.rotate),
+                button(tr_text("Einpassen"), self.fit),
+                button(tr_text("Zuschneiden"), self.crop),
+                button(tr_text("Drehen"), self.rotate),
             )
         )
         preview_box.addWidget(
             row(
-                button("Ordnerbild", self.folder_image),
-                button("Eingebettetes Bild", self.embedded_image),
-                button("Bilddatei wählen", self.choose_image),
+                button(tr_text("Ordnerbild"), self.folder_image),
+                button(tr_text("Eingebettetes Bild"), self.embedded_image),
+                button(tr_text("Bilddatei wählen"), self.choose_image),
             )
         )
         preview_box.addWidget(
             row(
-                button("Vorschläge suchen", self.search_online),
-                button("Bild-URL laden", self.download_image),
-                button("Cover entfernen", self.clear_cover),
+                button(tr_text("Vorschläge suchen"), self.search_online),
+                button(tr_text("Bild-URL laden"), self.download_image),
+                button(tr_text("Cover entfernen"), self.clear_cover),
             )
         )
-        self.assignment = QLabel("Änderungen gelten nur für den ausgewählten Titel.")
+        self.assignment = _new(
+            QLabel, tr_text("Änderungen gelten nur für den ausgewählten Titel.")
+        )
         layout.addWidget(self.assignment)
         layout.addWidget(
             row(
-                button("Manifest importieren", self.import_manifest),
-                button("Manifest exportieren", self.export_manifest),
-                button("Etiketten als PDF …", self.labels),
-                button("Verwerfen", self.discard),
-                button("Diesem Titel zuordnen und speichern", self.save, True),
+                button(tr_text("Manifest importieren"), self.import_manifest),
+                button(tr_text("Manifest exportieren"), self.export_manifest),
+                button(tr_text("Etiketten als PDF …"), self.labels),
+                button(tr_text("Verwerfen"), self.discard),
+                button(tr_text("Diesem Titel zuordnen und speichern"), self.save, True),
             )
         )
         self.list.currentRowChanged.connect(self.select)
@@ -115,8 +138,19 @@ class CoversPage(QWidget):
             or (self.filter.currentIndex() == 2 and b.cover_confirmed)
         ]
         for index, book in enumerate(self.visible):
-            self.list.addItem(
-                f"{book.title}\n{book.series} · {'Bestätigt' if book.cover_confirmed else 'Vorhanden' if book.cover else 'Fehlt'}"
+            _ui(
+                self.list,
+                "addItem",
+                _f(
+                    "{p0}\n{p1} · {p2}",
+                    p0=book.title,
+                    p1=book.series,
+                    p2=(
+                        tr_text("Bestätigt")
+                        if book.cover_confirmed
+                        else tr_text("Vorhanden") if book.cover else tr_text("Fehlt")
+                    ),
+                ),
             )
             if book.id == identifier:
                 self.list.setCurrentRow(index)
@@ -132,12 +166,24 @@ class CoversPage(QWidget):
 
     def show_image(self):
         self.preview.setPixmap(cover_pixmap(self.pending, 400))
-        self.source_label.setText(
-            f"Quelle: {getattr(self, 'pending_source', '')}\n{self.pending}"
+        _ui(
+            self.source_label,
+            "setText",
+            _f(
+                "Quelle: {p0}\n{p1}",
+                p0=getattr(self, "pending_source", ""),
+                p1=self.pending,
+            ),
         )
         if self.book:
-            self.assignment.setText(
-                f"Zuordnung: {self.book.series} · {self.book.title} — Ausgabe und Titel vor Übernahme prüfen."
+            _ui(
+                self.assignment,
+                "setText",
+                _f(
+                    "Zuordnung: {p0} · {p1} — Ausgabe und Titel vor Übernahme prüfen.",
+                    p0=self.book.series,
+                    p1=self.book.title,
+                ),
             )
 
     def open_defaults(self):
@@ -152,17 +198,19 @@ class CoversPage(QWidget):
         self.show_image()
 
     def choose_image(self):
-        path, _ = QFileDialog.getOpenFileName(
+        path, _ = _ui(
+            QFileDialog,
+            "getOpenFileName",
             self,
-            "Cover auswählen",
+            tr_text("Cover auswählen"),
             self.book.folder if self.book else "",
-            "Bilder (*.jpg *.jpeg *.png *.webp)",
+            tr_text("Bilder (*.jpg *.jpeg *.png *.webp)"),
         )
         if path:
             try:
-                self.set_pending(path, "Manuelle Bilddatei")
+                self.set_pending(path, tr_text("Manuelle Bilddatei"))
             except Exception as exc:
-                QMessageBox.warning(self, "Cover", str(exc))
+                _ui(QMessageBox, "warning", self, tr_text("Cover"), str(exc))
 
     def folder_image(self):
         if not self.book:
@@ -173,15 +221,25 @@ class CoversPage(QWidget):
             if p.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"}
         ]
         if not paths:
-            QMessageBox.information(
-                self, "Ordnerbild", "Keine Bilddatei im Hörspielordner gefunden."
+            _ui(
+                QMessageBox,
+                "information",
+                self,
+                tr_text("Ordnerbild"),
+                tr_text("Keine Bilddatei im Hörspielordner gefunden."),
             )
             return
-        path, ok = QInputDialog.getItem(
-            self, "Ordnerbild", "Bilddatei dieses Hörspiels", paths, editable=False
+        path, ok = _ui(
+            QInputDialog,
+            "getItem",
+            self,
+            tr_text("Ordnerbild"),
+            tr_text("Bilddatei dieses Hörspiels"),
+            paths,
+            editable=False,
         )
         if ok:
-            self.set_pending(path, "Ordnerbild")
+            self.set_pending(path, tr_text("Ordnerbild"))
 
     def embedded_image(self):
         if not self.book:
@@ -192,10 +250,18 @@ class CoversPage(QWidget):
             data = covers.embedded(track.path)
             if data:
                 path = self.temp_path()
-                covers.checked_image(BytesIO(data)).save(path, "JPEG")
-                self.set_pending(path, "Eingebettetes Bild: " + Path(track.path).name)
+                covers.checked_image(BytesIO(data)).save(path, tr_text("JPEG"))
+                self.set_pending(
+                    path, tr_text("Eingebettetes Bild: ") + Path(track.path).name
+                )
                 return
-        QMessageBox.information(self, "Cover", "Kein eingebettetes Cover gefunden.")
+        _ui(
+            QMessageBox,
+            "information",
+            self,
+            tr_text("Cover"),
+            tr_text("Kein eingebettetes Cover gefunden."),
+        )
 
     def temp_path(self):
         import uuid
@@ -209,8 +275,8 @@ class CoversPage(QWidget):
             return
         image = covers.checked_image(self.pending).rotate(-90, expand=True)
         path = self.temp_path()
-        image.save(path, "JPEG", quality=95)
-        self.set_pending(path, "Manuell gedreht")
+        image.save(path, tr_text("JPEG"), quality=95)
+        self.set_pending(path, tr_text("Manuell gedreht"))
 
     def fit(self):
         self.show_image()
@@ -225,10 +291,12 @@ class CoversPage(QWidget):
             dialog = CropDialog(image, self)
             if dialog.exec():
                 path = self.temp_path()
-                image.crop(dialog.canvas.crop_box()).save(path, "JPEG", quality=95)
-                self.set_pending(path, "Manuell zugeschnitten")
+                image.crop(dialog.canvas.crop_box()).save(
+                    path, tr_text("JPEG"), quality=95
+                )
+                self.set_pending(path, tr_text("Manuell zugeschnitten"))
         except Exception as exc:
-            QMessageBox.warning(self, "Zuschnitt", str(exc))
+            _ui(QMessageBox, "warning", self, tr_text("Zuschnitt"), str(exc))
 
     def search_online(self):
         if not self.book:
@@ -239,34 +307,43 @@ class CoversPage(QWidget):
             "https://www.google.com/search?"
             + urlencode(
                 {
-                    "q": self.book.series + " " + self.book.title + " Hörspiel Cover",
+                    "q": self.book.series
+                    + " "
+                    + self.book.title
+                    + tr_text(" Hörspiel Cover"),
                     "tbm": "isch",
                 }
             )
         )
-        self.source_label.setText(
-            "Bildsuche im Browser geöffnet. Passende Ausgabe prüfen, Bild speichern oder direkte Bild-URL laden; keine automatische Zuordnung."
+        _ui(
+            self.source_label,
+            "setText",
+            tr_text(
+                "Bildsuche im Browser geöffnet. Passende Ausgabe prüfen, Bild speichern oder direkte Bild-URL laden; keine automatische Zuordnung."
+            ),
         )
 
     def download_image(self):
         if not self.book:
             return
-        url, ok = QInputDialog.getText(
+        url, ok = _ui(
+            QInputDialog,
+            "getText",
             self,
-            "Cover-Vorschlag laden",
-            "Direkte Bildadresse (wird erst nach Zuordnung verwendet):",
+            tr_text("Cover-Vorschlag laden"),
+            tr_text("Direkte Bildadresse (wird erst nach Zuordnung verwendet):"),
         )
         if ok and url:
             background(
                 self,
                 lambda _: covers.download(url, self.temp_path()),
                 lambda path: self.set_pending(
-                    path, "Online-Vorschlag, noch nicht bestätigt: " + url
+                    path, tr_text("Online-Vorschlag, noch nicht bestätigt: ") + url
                 ),
             )
 
     def clear_cover(self):
-        self.pending, self.pending_source = "", "Manuell leer gelassen"
+        self.pending, self.pending_source = "", tr_text("Manuell leer gelassen")
         self.show_image()
 
     def discard(self):
@@ -284,8 +361,13 @@ class CoversPage(QWidget):
         self.refresh()
 
     def export_manifest(self):
-        path, _ = QFileDialog.getSaveFileName(
-            self, "Cover-Manifest", "Cover-Manifest.json", "JSON (*.json)"
+        path, _ = _ui(
+            QFileDialog,
+            "getSaveFileName",
+            self,
+            tr_text("Cover-Manifest"),
+            "Cover-Manifest.json",
+            tr_text("JSON (*.json)"),
         )
         if path:
             atomic_json(
@@ -304,8 +386,13 @@ class CoversPage(QWidget):
             )
 
     def import_manifest(self):
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Cover-Manifest", "", "JSON (*.json)"
+        path, _ = _ui(
+            QFileDialog,
+            "getOpenFileName",
+            self,
+            tr_text("Cover-Manifest"),
+            "",
+            tr_text("JSON (*.json)"),
         )
         if not path:
             return
@@ -324,16 +411,20 @@ class CoversPage(QWidget):
                     matches.append((candidates[0], entry))
             if not matches:
                 raise ValueError(
-                    "Keine eindeutigen Ordner-/ID-Zuordnungen im Manifest gefunden."
+                    tr_text(
+                        "Keine eindeutigen Ordner-/ID-Zuordnungen im Manifest gefunden."
+                    )
                 )
-            preview = "\n".join(
+            preview = tr_text("\n").join(
                 f"{book.title} ← {entry['cover']}" for book, entry in matches
             )
             if (
-                QMessageBox.question(
+                _ui(
+                    QMessageBox,
+                    "question",
                     self,
-                    "Zuordnungen prüfen",
-                    preview + "\n\nDiese Zuordnungen übernehmen?",
+                    tr_text("Zuordnungen prüfen"),
+                    preview + tr_text("\n\nDiese Zuordnungen übernehmen?"),
                 )
                 != QMessageBox.StandardButton.Yes
             ):
@@ -353,7 +444,9 @@ class CoversPage(QWidget):
                         )
                     )
                     covers.checked_image(image)
-                    result.append((book, image, entry.get("source", "Manifest")))
+                    result.append(
+                        (book, image, entry.get("source", tr_text("Manifest")))
+                    )
                 return result
 
             def apply(result):
@@ -369,24 +462,39 @@ class CoversPage(QWidget):
 
             background(self, download_all, apply)
         except Exception as exc:
-            QMessageBox.warning(self, "Manifest", str(exc))
+            _ui(QMessageBox, "warning", self, tr_text("Manifest"), str(exc))
 
     def labels(self):
         books = self.collection.selection() or ([self.book] if self.book else [])
         if not books:
-            QMessageBox.information(
+            _ui(
+                QMessageBox,
+                "information",
                 self,
-                "Etiketten",
-                "Bitte Hörspiele in der Sammlung oder hier auswählen.",
+                tr_text("Etiketten"),
+                tr_text("Bitte Hörspiele in der Sammlung oder hier auswählen."),
             )
             return
-        width, ok = QInputDialog.getDouble(
-            self, "Etiketten", "Quadratische Etikettengröße in mm", 35, 10, 100, 1
+        width, ok = _ui(
+            QInputDialog,
+            "getDouble",
+            self,
+            tr_text("Etiketten"),
+            tr_text("Quadratische Etikettengröße in mm"),
+            35,
+            10,
+            100,
+            1,
         )
         if not ok:
             return
-        path, _ = QFileDialog.getSaveFileName(
-            self, "Etiketten-PDF", "Etiketten.pdf", "PDF (*.pdf)"
+        path, _ = _ui(
+            QFileDialog,
+            "getSaveFileName",
+            self,
+            tr_text("Etiketten-PDF"),
+            tr_text("Etiketten.pdf"),
+            tr_text("PDF (*.pdf)"),
         )
         if not path:
             return
@@ -407,14 +515,18 @@ class CoversPage(QWidget):
             ), margin + local // columns * (side + gap + 8 * unit)
             image = cover_pixmap(book.cover, round(side))
             painter.drawPixmap(round(x + (side - image.width()) / 2), round(y), image)
-            painter.drawText(
+            _ui(
+                painter,
+                "drawText",
                 QRectF(x, y + side, side, 8 * unit),
                 Qt.AlignmentFlag.AlignCenter | Qt.TextFlag.TextWordWrap,
                 book.title,
             )
         painter.end()
-        QMessageBox.information(
+        _ui(
+            QMessageBox,
+            "information",
             self,
-            "Etiketten",
-            "PDF gespeichert. Beim Drucken tatsächliche Größe / 100 % wählen.",
+            tr_text("Etiketten"),
+            tr_text("PDF gespeichert. Beim Drucken tatsächliche Größe / 100 % wählen."),
         )

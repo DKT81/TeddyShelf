@@ -174,6 +174,27 @@ def run(directory):
             window.settings_page.navigation.setCurrentRow(index)
             app.processEvents()
             window.grab().save(str(root / f"GUI-{name}.png"))
+        # Exercise catalogs and live retranslation in the packaged application.
+        from .i18n import manager, text, render
+        from PySide6.QtWidgets import QListWidgetItem, QMessageBox
+
+        language = window.settings_page.controls["language"]
+        language.setCurrentIndex(language.findData("en"))
+        app.processEvents()
+        assert render(text("Einstellungen")) == "Settings"
+        assert QListWidgetItem.text(window.navigation.item(0)) == "Collection"
+        for index in range(window.stack.count()):
+            window.navigation.setCurrentRow(index)
+            app.processEvents()
+            assert window.grab().save(str(root / f"GUI-English-{index}.png"))
+        language.setCurrentIndex(language.findData("de"))
+        app.processEvents()
+        assert QListWidgetItem.text(window.navigation.item(0)) == "Sammlung"
+        assert manager.qt_base is not None
+        dialog = QMessageBox()
+        dialog.setStandardButtons(QMessageBox.StandardButton.Cancel)
+        assert "Abbrechen" in dialog.button(QMessageBox.StandardButton.Cancel).text()
+        report["languages"] = ["de", "en"]
         window.close()
         app.processEvents()
         report.update(

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from .i18n import text as tr_text, format_text as _f
+from .i18n_widgets import call as _ui, create as _new
+
 from PySide6.QtCore import (
     QObject,
     QRunnable,
@@ -59,7 +62,9 @@ def background(parent, function, done):
     task.signals.done.connect(done)
     task.signals.done.connect(lambda _: finish())
     task.signals.failed.connect(
-        lambda message: QMessageBox.warning(parent, "Vorgang fehlgeschlagen", message)
+        lambda message: _ui(
+            QMessageBox, "warning", parent, tr_text("Vorgang fehlgeschlagen"), message
+        )
     )
     task.signals.failed.connect(lambda _: finish())
     QThreadPool.globalInstance().start(task)
@@ -67,27 +72,51 @@ def background(parent, function, done):
 
 
 def button(text, function, primary=False, tooltip=""):
-    control = QPushButton(text)
+    control = _new(QPushButton, text)
     control.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
-    control.setToolTip(
+    _ui(
+        control,
+        "setToolTip",
         tooltip
         or {
-            "Spur ↑": "Markierte Spur in der Wiedergabereihenfolge nach oben verschieben.",
-            "Spur ↓": "Markierte Spur in der Wiedergabereihenfolge nach unten verschieben.",
-            "Daten übernehmen": "Änderungen in der lokalen Sammlung speichern. Quelldateien bleiben unverändert.",
-            "Tags in Quelldateien schreiben …": "Nach Vorschau die Originaldateien ändern; vorher werden Sicherungen erstellt.",
-            "Reihenfolge bestätigen": "Aktuelle Reihenfolge speichern und eine Playlist-Warnung bestätigen.",
-            "Wellenform laden": "Wellenform der Eingabedateien berechnen; orange Linien markieren Schnittgrenzen.",
-            "Auftrag erstellen": "Den angezeigten Schnittplan als ausführbaren Auftrag in die Warteschlange aufnehmen.",
-            "Ausgewählte importieren …": "Importvorschau für die ausgewählten Hörspiele öffnen.",
-            "Ordner einlesen": "Ordner einschließlich Unterordnern einlesen. Unveränderte Audiodaten werden zwischengespeichert.",
-            "Quelle entfernen": "Markierten Eintrag nur aus der Eingabeliste entfernen. Die Datei bleibt erhalten.",
-            "Liste leeren": "Alle Einträge aus der Eingabeliste entfernen; keine Dateien löschen.",
-            "…": "Datei oder Ordner auswählen.",
+            tr_text("Spur ↑"): tr_text(
+                "Markierte Spur in der Wiedergabereihenfolge nach oben verschieben."
+            ),
+            tr_text("Spur ↓"): tr_text(
+                "Markierte Spur in der Wiedergabereihenfolge nach unten verschieben."
+            ),
+            tr_text("Daten übernehmen"): tr_text(
+                "Änderungen in der lokalen Sammlung speichern. Quelldateien bleiben unverändert."
+            ),
+            tr_text("Tags in Quelldateien schreiben …"): tr_text(
+                "Nach Vorschau die Originaldateien ändern; vorher werden Sicherungen erstellt."
+            ),
+            tr_text("Reihenfolge bestätigen"): tr_text(
+                "Aktuelle Reihenfolge speichern und eine Playlist-Warnung bestätigen."
+            ),
+            tr_text("Wellenform laden"): tr_text(
+                "Wellenform der Eingabedateien berechnen; orange Linien markieren Schnittgrenzen."
+            ),
+            tr_text("Auftrag erstellen"): tr_text(
+                "Den angezeigten Schnittplan als ausführbaren Auftrag in die Warteschlange aufnehmen."
+            ),
+            tr_text("Ausgewählte importieren …"): tr_text(
+                "Importvorschau für die ausgewählten Hörspiele öffnen."
+            ),
+            tr_text("Ordner einlesen"): tr_text(
+                "Ordner einschließlich Unterordnern einlesen. Unveränderte Audiodaten werden zwischengespeichert."
+            ),
+            tr_text("Quelle entfernen"): tr_text(
+                "Markierten Eintrag nur aus der Eingabeliste entfernen. Die Datei bleibt erhalten."
+            ),
+            tr_text("Liste leeren"): tr_text(
+                "Alle Einträge aus der Eingabeliste entfernen; keine Dateien löschen."
+            ),
+            "…": tr_text("Datei oder Ordner auswählen."),
         }.get(
             text,
-            text.replace("…", "") + " – Aktion für die aktuelle Ansicht oder Auswahl.",
-        )
+            text + tr_text(" – Aktion für die aktuelle Ansicht oder Auswahl."),
+        ),
     )
     control.clicked.connect(function)
     if primary:
@@ -194,30 +223,44 @@ def row(*widgets):
 def heading(title, subtitle=""):
     container = QWidget()
     layout = QVBoxLayout(container)
-    label = QLabel(title)
+    label = _new(QLabel, title)
     label.setObjectName("heading")
     layout.addWidget(label)
     if subtitle:
-        layout.addWidget(QLabel(subtitle))
+        layout.addWidget(_new(QLabel, subtitle))
     return container
 
 
 def path_control(edit, parent, directory=True, save=False, filter="Alle Dateien (*)"):
     def choose():
         if directory:
-            value = QFileDialog.getExistingDirectory(
-                parent, "Ordner auswählen", edit.text()
+            value = _ui(
+                QFileDialog,
+                "getExistingDirectory",
+                parent,
+                tr_text("Ordner auswählen"),
+                edit.text(),
             )
         elif save:
-            value, _ = QFileDialog.getSaveFileName(
-                parent, "Datei speichern", edit.text(), filter
+            value, _ = _ui(
+                QFileDialog,
+                "getSaveFileName",
+                parent,
+                tr_text("Datei speichern"),
+                edit.text(),
+                filter,
             )
         else:
-            value, _ = QFileDialog.getOpenFileName(
-                parent, "Datei auswählen", edit.text(), filter
+            value, _ = _ui(
+                QFileDialog,
+                "getOpenFileName",
+                parent,
+                tr_text("Datei auswählen"),
+                edit.text(),
+                filter,
             )
         if value:
-            edit.setText(value)
+            _ui(edit, "setText", value)
 
     return row(edit, button("…", choose))
 
@@ -230,7 +273,7 @@ def cover_pixmap(path, size=160):
         painter = QPainter(pixmap)
         painter.setPen(QPen(QColor("#718783"), 3))
         painter.drawRoundedRect(size // 4, size // 4, size // 2, size // 2, 10, 10)
-        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "♪")
+        _ui(painter, "drawText", pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "♪")
         painter.end()
     return pixmap.scaled(
         size,

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "teddyshelf"
-version = "0.5.0"
+version = "0.6.0"
 license = "GPL-3.0-or-later"
 description = "Windows audiobook library, audio editor and verified TeddyCloud importer"
 requires-python = ">=3.11"
@@ -16,6 +16,9 @@ teddystudio = "teddystudio.app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+teddystudio = ["locales/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

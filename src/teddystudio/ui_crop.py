@@ -1,5 +1,8 @@
 """Direct image crop selection in original image coordinates, independent of scaling."""
 
+from .i18n import text as tr_text, format_text as _f
+from .i18n_widgets import call as _ui, create as _new
+
 import math
 from PySide6.QtCore import Qt, QRectF, QPointF, Signal
 from PySide6.QtGui import QImage, QPainter, QColor, QPen, QPainterPath, QPixmap
@@ -34,8 +37,12 @@ class CropCanvas(QWidget):
         self.setMinimumSize(320, 240)
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self.setToolTip(
-            "Im Bild einen Rahmen aufziehen. Innen ziehen zum Verschieben; Ecken und Kanten ziehen zum Vergrößern. Pfeiltasten verschieben, Umschalt + Pfeil um zehn Bildpunkte."
+        _ui(
+            self,
+            "setToolTip",
+            tr_text(
+                "Im Bild einen Rahmen aufziehen. Innen ziehen zum Verschieben; Ecken und Kanten ziehen zum Vergrößern. Pfeiltasten verschieben, Umschalt + Pfeil um zehn Bildpunkte."
+            ),
         )
         self.reset()
 
@@ -293,11 +300,16 @@ class CropCanvas(QWidget):
 class CropDialog(QDialog):
     def __init__(self, image, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Cover zuschneiden – Rahmen im Bild ziehen")
+        _ui(
+            self, "setWindowTitle", tr_text("Cover zuschneiden – Rahmen im Bild ziehen")
+        )
         self.resize(980, 680)
         layout = QVBoxLayout(self)
-        help = QLabel(
-            "Rahmen im Bild aufziehen, innen verschieben oder an den Griffen verändern. Die Quelldatei bleibt erhalten."
+        help = _new(
+            QLabel,
+            tr_text(
+                "Rahmen im Bild aufziehen, innen verschieben oder an den Griffen verändern. Die Quelldatei bleibt erhalten."
+            ),
         )
         help.setWordWrap(True)
         layout.addWidget(help)
@@ -307,21 +319,23 @@ class CropDialog(QDialog):
         body.addWidget(self.canvas, 1)
         side = QVBoxLayout()
         body.addLayout(side)
-        side.addWidget(QLabel("Vorschau"))
-        self.preview = QLabel()
+        side.addWidget(_new(QLabel, tr_text("Vorschau")))
+        self.preview = _new(QLabel)
         self.preview.setFixedSize(200, 200)
         side.addWidget(self.preview)
-        square = QCheckBox("Quadratischer Ausschnitt")
+        square = _new(QCheckBox, tr_text("Quadratischer Ausschnitt"))
         square.setChecked(True)
         square.toggled.connect(self.canvas.set_square)
         side.addWidget(square)
-        side.addWidget(button("Rahmen zurücksetzen", self.canvas.reset))
+        side.addWidget(button(tr_text("Rahmen zurücksetzen"), self.canvas.reset))
         side.addStretch()
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
-        buttons.button(QDialogButtonBox.StandardButton.Ok).setText(
-            "Zuschnitt übernehmen"
+        _ui(
+            buttons.button(QDialogButtonBox.StandardButton.Ok),
+            "setText",
+            tr_text("Zuschnitt übernehmen"),
         )
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
