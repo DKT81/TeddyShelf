@@ -4,6 +4,14 @@ on:
   workflow_dispatch:
   push:
     tags: ['v*']
+    branches: ['main', 'feature/windows-release-0.8']
+    paths:
+      - '.github/workflows/windows-build.yml'
+      - 'scripts/build-windows.ps1'
+      - 'scripts/build_windows.py'
+      - 'scripts/prepare_windows_tools.py'
+      - 'scripts/verify_windows_exe.py'
+      - 'requirements-build-windows.txt'
   pull_request:
     paths:
       - '.github/workflows/windows-build.yml'
