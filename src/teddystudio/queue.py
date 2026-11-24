@@ -24,6 +24,7 @@ def run_child(request_path):
     native_temp = Path(request["work"]) / "native-temp"
     native_temp.mkdir(parents=True, exist_ok=True)
     tempfile.tempdir = str(native_temp)
+    os.environ["TEMP"] = os.environ["TMP"] = str(native_temp)
     from .jobs import execute
 
     def log(stage, message, progress=None):
@@ -279,8 +280,19 @@ class Worker:
                 from .domain import Book
 
                 book = Book.from_dict(result["book"])
+                from .library import within_folder
+
                 old = next((b for b in self.store.books() if b.id == book.id), None)
-                if not old or "Manuell" not in old.origin:
+                if any(
+                    within_folder(book.folder, path)
+                    for path in self.store.collection_exclusions()
+                ):
+                    self.store.event(
+                        identifier,
+                        "Sammlung unverändert",
+                        "Der Zielordner wurde aus der Sammlung entfernt; Quelldateien bleiben erhalten",
+                    )
+                elif not old or "Manuell" not in old.origin:
                     self.store.save_book(book)
                 else:
                     self.store.event(

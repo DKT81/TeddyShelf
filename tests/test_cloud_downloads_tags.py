@@ -298,6 +298,23 @@ def test_download_can_export_chapter_tracks(cloud_server, tmp_path, fmt):
     assert len(result["book"]["tracks"]) == 2
     assert abs(sum(t["duration"] for t in result["book"]["tracks"]) - 4.2) < 0.3
     assert all(t["path"].endswith("." + fmt) for t in result["book"]["tracks"])
+    assert [Path(t["path"]).name for t in result["book"]["tracks"]] == [
+        f"001-Kapitel Eins.{fmt}",
+        f"002-Kapitel Zwei.{fmt}",
+    ]
+    assert [
+        media.probe(t["path"])["tags"].get("title") for t in result["book"]["tracks"]
+    ] == ["Kapitel Eins", "Kapitel Zwei"]
+
+
+def test_unknown_or_mismatched_track_titles_are_not_misassigned():
+    from teddystudio.downloads import chapter_title, chapter_filename
+
+    assert chapter_title({"model": {"tracks": ["Wrong chapter"]}}, 0, 2) == "Spur 001"
+    assert (
+        chapter_filename("Überraschung / Ein Bagger!", 2, "mp3")
+        == "002-Ueberraschung - Ein Bagger.mp3"
+    )
 
 
 def tag_payload(cloud_server):

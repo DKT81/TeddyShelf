@@ -29,10 +29,19 @@ from .domain import Book, Track
 
 
 class WebPage(QWidget):
-    def __init__(self, store, settings, worker, jobs_added, audio_handoff):
+    def __init__(
+        self,
+        store,
+        settings,
+        worker,
+        jobs_added,
+        audio_handoff,
+        collection_handoff=None,
+    ):
         super().__init__()
         self.store, self.settings, self.worker = store, settings, worker
         self.jobs_added, self.audio_handoff = jobs_added, audio_handoff
+        self.collection_handoff = collection_handoff
         self.tools = ToolManager()
         self.cancelled = threading.Event()
         self.snapshot = None
@@ -118,6 +127,10 @@ class WebPage(QWidget):
                 button(tr_text("Fehler der Auswahl wiederholen"), self.retry_selected),
                 button(
                     tr_text("Fertiges Audio an Audioansicht übergeben"), self.handoff
+                ),
+                button(
+                    tr_text("Fertiges Audio in Sammlung übernehmen"),
+                    lambda: self.handoff(True),
                 ),
             )
         )
@@ -455,7 +468,7 @@ class WebPage(QWidget):
                 self.store.update_job(job["id"], "Wartet")
         self.worker.start()
 
-    def handoff(self):
+    def handoff(self, to_collection=False):
         selected = {entry["index"] for entry in self.selected_entries()}
         options = [
             json.loads(job["payload"])["web"]
@@ -478,12 +491,33 @@ class WebPage(QWidget):
         def read(_):
             tracks = []
             for option in sorted(options, key=lambda value: value["entry"]["index"]):
-                saved = web_downloads.saved_result(option)
+                saved = (
+                    web_downloads.organize_download(option)
+                    if to_collection
+                    else web_downloads.saved_result(option)
+                )
                 if saved is None:
                     raise ValueError(
                         tr_text("Download fehlt; Auftrag erneut ausführen")
                     )
                 info = media.probe(saved["path"], self.settings.ffprobe)
+                if to_collection:
+                    from .library import web_book
+
+                    tracks.append(
+                        web_book(
+                            saved["path"],
+                            {
+                                **saved,
+                                "title": saved.get("title") or option["entry"]["title"],
+                                "playlist": saved.get("playlist")
+                                or option.get("playlist", ""),
+                                "index": option["entry"]["index"],
+                            },
+                            info,
+                        )
+                    )
+                    continue
                 tracks.append(
                     Track(
                         saved["path"],
@@ -495,6 +529,9 @@ class WebPage(QWidget):
             return tracks
 
         def ready(tracks):
-            self.audio_handoff(title, tracks)
+            if to_collection and self.collection_handoff:
+                self.collection_handoff(tracks)
+            elif not to_collection:
+                self.audio_handoff(title, tracks)
 
         self.task(read, ready)

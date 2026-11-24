@@ -143,6 +143,7 @@ class MainWindow(QMainWindow):
             self.worker,
             self.jobs_added,
             self.web_audio_handoff,
+            self.web_collection_handoff,
         )
 
         def offer_tag(entry):
@@ -234,7 +235,10 @@ class MainWindow(QMainWindow):
             and not self.collection.books
         ):
             QTimer.singleShot(
-                0, lambda: self.collection.start_scan(self.settings.last_collection)
+                0,
+                lambda: self.collection.start_scan(
+                    self.settings.last_collection, explicit=False
+                ),
             )
 
     def _language_changed(self):
@@ -495,6 +499,10 @@ class MainWindow(QMainWindow):
         self.audio_page.mode.setCurrentIndex(2)
         self.audio_page.refresh_sources()
         self.navigation.setCurrentRow(2)
+
+    def web_collection_handoff(self, books):
+        self.collection.import_web_books(books)
+        self.navigation.setCurrentRow(0)
 
     def jobs_changed(self):
         self.jobs_page.refresh()

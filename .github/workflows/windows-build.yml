@@ -1,0 +1,114 @@
+name: Windows Build & Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+  pull_request:
+    paths:
+      - '.github/workflows/windows-build.yml'
+      - 'scripts/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'assets/**'
+      - 'pyproject.toml'
+      - 'requirements-build-windows.txt'
+      - 'launch.py'
+
+# Build and pull-request validation never receive repository write access.
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and test Windows x64
+    runs-on: windows-2022
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.build.outputs.version }}
+      exe: ${{ steps.build.outputs.exe }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13.9'
+          architecture: x64
+      - name: Build, test and verify standalone EXE
+        id: build
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/build-windows.ps1
+      - name: Verify version tag
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          APP_VERSION: ${{ steps.build.outputs.version }}
+        run: |
+          .venv-build-windows/Scripts/python.exe -c "import os; from packaging.version import Version; assert Version(os.environ['RELEASE_TAG'].removeprefix('v')) == Version(os.environ['APP_VERSION']), 'Tag and application versions differ'"
+          if ($LASTEXITCODE -ne 0) { throw 'Version tag mismatch' }
+      - name: Upload verified Windows executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: TeddyShelf-Windows-x64-${{ steps.build.outputs.version }}
+          path: |
+            dist/windows-release/*.exe
+            dist/windows-release/*.sha256
+            dist/windows-release/*-Licenses.zip
+            dist/windows-release/build-provenance.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+      - name: Upload diagnostic test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-test-results
+          path: |
+            artifacts/windows-build/test-results.xml
+            artifacts/windows-build/standalone-check/selftest.json
+            artifacts/windows-build/standalone-check/GUI-*.png
+          if-no-files-found: ignore
+
+  publish:
+    name: Publish verified GitHub Release
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # GitHub permissions are job-scoped. Only this publication job can write.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TeddyShelf-Windows-x64-${{ needs.build.outputs.version }}
+          path: release-assets
+      - name: Verify checksum and publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          APP_VERSION: ${{ needs.build.outputs.version }}
+          EXE_NAME: ${{ needs.build.outputs.exe }}
+        working-directory: release-assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum --check "$EXE_NAME.sha256"
+          args=(--repo "$GH_REPO" --verify-tag --generate-notes --draft --title "TeddyShelf $RELEASE_TAG")
+          case "${RELEASE_TAG,,}" in
+            *beta*|*alpha*|*rc*|*dev*|*[0-9]b[0-9]*|*[0-9]a[0-9]*) args+=(--prerelease --latest=false) ;;
+          esac
+          gh release create "$RELEASE_TAG" "${args[@]}" "$EXE_NAME" "$EXE_NAME.sha256" ./*-Licenses.zip ./build-provenance.json
+          # Failed uploads leave an unpublished draft, never a partial public release.
+          gh release edit "$RELEASE_TAG" --repo "$GH_REPO" --draft=false

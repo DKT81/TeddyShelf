@@ -12,6 +12,7 @@ import subprocess
 import threading
 import time
 import uuid
+import shutil
 
 from . import media
 from .domain import Book, Track, ascii_name
@@ -214,7 +215,11 @@ def output_path(options):
         title = "web-audio" if options["mode"] == "audio" else "web-video"
     token = hashlib.sha256(web_url(entry["url"]).encode()).hexdigest()[:10]
     extension = ".mp3" if options["mode"] == "audio" else ".mp4"
-    return root / f"{int(entry['index']):04}-{title}-{token}{extension}"
+    stem = f"{int(entry['index']):04}-{title}-{token}"
+    if options.get("layout") == "per-title":
+        return root / stem / (stem + extension)
+    # Existing 0.7.0 jobs retain their old path for resume and receipt checks.
+    return root / (stem + extension)
 
 
 def make_payloads(snapshot, entries, destination, mode, tools, settings):
@@ -241,6 +246,7 @@ def make_payloads(snapshot, entries, destination, mode, tools, settings):
                     "entry": entry,
                     "destination": str(Path(destination).resolve()),
                     "mode": mode,
+                    "layout": "per-title",
                     "tools": tools,
                 },
             }
@@ -386,6 +392,8 @@ def execute_web(payload, work, log):
         if source.suffix.lower() != target.suffix.lower():
             raise ValueError("Ausgabeformat passt nicht zur gewählten Vorschau")
         try:
+            if options["mode"] == "audio":
+                write_audio_tags(source, options)
             info = (
                 media.probe(source, settings.ffprobe)
                 if options["mode"] == "audio"
@@ -451,6 +459,9 @@ def execute_web(payload, work, log):
             "title": options["entry"]["title"],
             "index": options["entry"]["index"],
             "engine": tools["yt-dlp"]["version"],
+            "playlist": options.get("playlist", ""),
+            "batch": options["batch"],
+            "artist": options["entry"].get("artist", ""),
         }
         # Reserve the destination rather than silently replacing an unrelated file.
         # A receipt is written first; interrupted publication remains recoverable.
@@ -478,3 +489,76 @@ def execute_web(payload, work, log):
         "message": result["path"],
         "web_result": result,
     }
+
+
+def write_audio_tags(path, options):
+    """Tag the newly downloaded staging file, never an existing source file."""
+    import mutagen
+
+    audio = mutagen.File(path, easy=True)
+    if audio is None:
+        raise ValueError("Audio-Metadaten konnten nicht geschrieben werden")
+    if audio.tags is None:
+        audio.add_tags()
+    audio["title"] = [options["entry"]["title"]]
+    # One download is one audiobook; a web playlist is not its album/series.
+    audio["album"] = [options["entry"]["title"]]
+    audio["tracknumber"] = [str(options["entry"]["index"])]
+    if options["entry"].get("artist"):
+        audio["artist"] = [options["entry"]["artist"]]
+    audio.save()
+
+
+def organize_download(options):
+    """Copy a legacy flat download into its own folder without deleting sources."""
+    original = saved_result(options)
+    if original is None:
+        raise ValueError("Download fehlt; Auftrag erneut ausführen")
+    structured = {**options, "layout": "per-title"}
+    target = output_path(structured)
+    source = Path(original["path"])
+    if source.resolve() == target.resolve():
+        return original
+    target.parent.mkdir(parents=True, exist_ok=True)
+    existing = saved_result(structured)
+    if existing is None:
+        temporary = target.with_name(target.name + ".partial-" + uuid.uuid4().hex)
+        try:
+            shutil.copy2(source, temporary)
+            if sha256(temporary) != original["sha256"]:
+                raise ValueError("Kopie stimmt nicht mit dem Web-Download überein")
+            if options["mode"] == "audio":
+                write_audio_tags(temporary, options)
+            metadata = {
+                key: value
+                for key, value in original.items()
+                if key not in {"path", "organized_copy"}
+            }
+            metadata.update(
+                {
+                    "organized_from": str(source),
+                    "organized_from_hash": original["sha256"],
+                    "sha256": sha256(temporary),
+                    "playlist": original.get("playlist") or options.get("playlist", ""),
+                }
+            )
+            atomic_json(
+                target.with_suffix(target.suffix + ".teddyshelf-web.json"), metadata
+            )
+            if os.name == "nt":
+                os.rename(temporary, target)
+            else:
+                os.link(temporary, target)
+        finally:
+            temporary.unlink(missing_ok=True)
+        existing = saved_result(structured)
+    if existing.get("organized_from_hash", existing["sha256"]) != original["sha256"]:
+        raise ValueError(
+            "Im Hörspielordner liegt ein anderes Ergebnis; keine Dateien überschrieben"
+        )
+    # The scanner suppresses a flat duplicate only while the verified copy exists.
+    receipt = source.with_suffix(source.suffix + ".teddyshelf-web.json")
+    metadata = json.loads(receipt.read_text("utf-8"))
+    metadata["organized_copy"] = str(target.resolve())
+    atomic_json(receipt, metadata)
+    return existing

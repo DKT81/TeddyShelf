@@ -13,6 +13,7 @@ import re
 import shutil
 import tempfile
 import zipfile
+import sys
 
 import requests
 
@@ -44,9 +45,49 @@ class ToolManager:
         self.root = Path(root or data_directory() / "web-tools")
         self.session = session or requests.Session()
 
-    def state(self):
+    def state(self, seed=True):
         path = self.root / "active.json"
-        return json.loads(path.read_text("utf-8")) if path.exists() else {}
+        state = json.loads(path.read_text("utf-8")) if path.exists() else {}
+        if (
+            seed
+            and getattr(sys, "frozen", False)
+            and any(name not in state for name in ("yt-dlp", "deno"))
+        ):
+            self.seed_bundled(Path(sys._MEIPASS) / "tools" / "web-tools")
+            return self.state(seed=False)
+        return state
+
+    def seed_bundled(self, folder):
+        """Install bundled starting versions into writable user data, once only."""
+        from .jobs import exclusive_lock
+
+        folder = Path(folder)
+        manifest = folder / "manifest.json"
+        if not manifest.is_file():
+            return
+        entries = json.loads(manifest.read_text("utf-8"))
+        self.root.mkdir(parents=True, exist_ok=True)
+        with exclusive_lock(self.root / "update.lock"):
+            state = self.state(seed=False)
+            for component in ("yt-dlp", "deno"):
+                if component in state:
+                    continue
+                entry = entries[component]
+                filename = component + ".exe"
+                if entry.get("filename") != filename:
+                    raise ValueError("Invalid bundled web tool filename")
+                source = folder / filename
+                self.verify({"path": str(source), "sha256": entry["sha256"]})
+                target = self.root / "versions" / component / entry["sha256"] / filename
+                target.parent.mkdir(parents=True, exist_ok=True)
+                if not target.exists():
+                    shutil.copy2(source, target)
+                self.verify({"path": str(target), "sha256": entry["sha256"]})
+                state[component] = {
+                    key: value for key, value in entry.items() if key != "filename"
+                }
+                state[component]["path"] = str(target.resolve())
+            atomic_json(self.root / "active.json", state)
 
     def snapshot(self):
         state = self.state()
@@ -137,6 +178,7 @@ class ToolManager:
         )
         if component not in {"yt-dlp", "deno"} or repo != expected_repo:
             raise ValueError("Unbekannte Werkzeugquelle")
+        self.state()
         self.root.mkdir(parents=True, exist_ok=True)
         with (
             exclusive_lock(self.root / "update.lock"),
@@ -220,7 +262,7 @@ class ToolManager:
                 "release": release["tag"],
             }
             self.verify(tool)
-            state = self.state()
+            state = self.state(seed=False)
             if cancelled():
                 raise InterruptedError("Werkzeug-Update abgebrochen")
             if state.get(component) != tool:
@@ -232,8 +274,9 @@ class ToolManager:
     def rollback(self, component="yt-dlp"):
         from .jobs import exclusive_lock
 
+        self.state()
         with exclusive_lock(self.root / "update.lock"):
-            state = self.state()
+            state = self.state(seed=False)
             previous = state.get("previous", {}).get(component)
             if not previous:
                 raise ValueError("Keine vorherige Werkzeugversion vorhanden")

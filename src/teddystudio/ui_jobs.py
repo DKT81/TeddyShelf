@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QCheckBox,
 )
-from .storage import atomic_json
+from .storage import atomic_json, Settings
 from .ui_common import button, heading, row
 
 
@@ -25,6 +25,7 @@ class JobsPage(QWidget):
     def __init__(self, store, worker):
         super().__init__()
         self.store, self.worker = store, worker
+        self.preferences = getattr(worker, "settings", None) or Settings.load()
         layout = QVBoxLayout(self)
         layout.addWidget(
             heading(
@@ -49,6 +50,7 @@ class JobsPage(QWidget):
         self.counts = _new(QLabel)
         self.counts.setWordWrap(True)
         self.hide_finished = _new(QCheckBox, tr_text("Fertige ausblenden"))
+        self.hide_finished.setChecked(self.preferences.hide_finished_jobs)
         _ui(
             self.hide_finished,
             "setToolTip",
@@ -146,6 +148,7 @@ class JobsPage(QWidget):
         )
         self.filter.currentTextChanged.connect(self.refresh)
         self.hide_finished.toggled.connect(self.refresh)
+        self.hide_finished.toggled.connect(self.save_visibility)
         self.table.currentCellChanged.connect(self.show_log)
         self.refresh()
 
@@ -233,8 +236,11 @@ class JobsPage(QWidget):
 
     def show_all(self):
         self.filter.setCurrentText(tr_text("Alle"))
-        self.hide_finished.setChecked(False)
         self.refresh()
+
+    def save_visibility(self, checked):
+        self.preferences.hide_finished_jobs = checked
+        self.preferences.save()
 
     def start_queue(self):
         self.show_all()

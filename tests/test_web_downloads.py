@@ -90,7 +90,7 @@ def test_selection_uses_original_positions_and_collision_safe_names(settings, tm
     assert [p["web"]["entry"]["index"] for p in payloads] == [1, 3]
     paths = [web.output_path(p["web"]) for p in payloads]
     assert paths[0].name.startswith("0001-") and paths[1].name.startswith("0003-")
-    assert all(p.parent == tmp_path for p in paths)
+    assert all(p.parent.parent == tmp_path for p in paths)
     other = json.loads(json.dumps(payloads[0]["web"]))
     other["entry"]["url"] += "?different=1"
     assert web.output_path(other) != paths[0]

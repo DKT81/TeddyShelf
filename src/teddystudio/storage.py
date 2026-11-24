@@ -47,6 +47,7 @@ def atomic_json(path: Path, value):
 
 @dataclass
 class Settings:
+    hide_finished_jobs: bool = False
     web_destination: str = field(
         default_factory=lambda: str(Path.home() / "Music" / "TeddyShelf-Web")
     )
@@ -121,6 +122,8 @@ class Store:
                     timestamp REAL, stage TEXT, message TEXT);
                 CREATE TABLE IF NOT EXISTS associations(source TEXT, server TEXT,
                     model TEXT, fingerprint TEXT, PRIMARY KEY(source,server));
+                CREATE TABLE IF NOT EXISTS collection_roots(path TEXT PRIMARY KEY);
+                CREATE TABLE IF NOT EXISTS collection_exclusions(path TEXT PRIMARY KEY);
             """)
             # A crash never establishes success. The worker revalidates its artifacts.
             db.execute(
@@ -158,6 +161,102 @@ class Store:
                 Book.from_dict(json.loads(r[0]))
                 for r in db.execute("SELECT data FROM books")
             ]
+
+    def collection_roots(self):
+        with self.connection() as db:
+            return [
+                row[0]
+                for row in db.execute("SELECT path FROM collection_roots ORDER BY path")
+            ]
+
+    def collection_exclusions(self):
+        with self.connection() as db:
+            return [
+                row[0] for row in db.execute("SELECT path FROM collection_exclusions")
+            ]
+
+    def register_collection_root(self, path):
+        from .library import within_folder
+
+        path = str(Path(path).resolve())
+        with self.connection() as db:
+            roots = [row[0] for row in db.execute("SELECT path FROM collection_roots")]
+            excluded = [
+                row[0] for row in db.execute("SELECT path FROM collection_exclusions")
+            ]
+            if any(within_folder(path, root) for root in excluded) or not any(
+                within_folder(path, root) for root in roots
+            ):
+                db.executemany(
+                    "DELETE FROM collection_roots WHERE path=?",
+                    [(root,) for root in roots if within_folder(root, path)],
+                )
+                db.execute("INSERT OR IGNORE INTO collection_roots VALUES (?)", (path,))
+            db.executemany(
+                "DELETE FROM collection_exclusions WHERE path=?",
+                [(root,) for root in excluded if within_folder(root, path)],
+            )
+
+    def remember_collection_root(self, path):
+        """Track a successful refresh without clearing removed-folder exclusions."""
+        from .library import within_folder
+
+        path = str(Path(path).resolve())
+        with self.connection() as db:
+            roots = [row[0] for row in db.execute("SELECT path FROM collection_roots")]
+            if any(within_folder(path, root) for root in roots):
+                return
+            excluded = [
+                row[0] for row in db.execute("SELECT path FROM collection_exclusions")
+            ]
+            redundant = [
+                (root,)
+                for root in roots
+                if within_folder(root, path)
+                and not any(within_folder(root, item) for item in excluded)
+            ]
+            db.executemany("DELETE FROM collection_roots WHERE path=?", redundant)
+            db.execute("INSERT OR IGNORE INTO collection_roots VALUES (?)", (path,))
+
+    def remove_collection_folder(self, path):
+        """Only database references; deliberately no filesystem removal API here."""
+        from .library import within_folder
+
+        path = str(Path(path).resolve())
+        with self.connection() as db:
+            identifiers = [
+                row[0]
+                for row in db.execute("SELECT id,data FROM books")
+                if within_folder(json.loads(row[1])["folder"], path)
+            ]
+            db.executemany(
+                "DELETE FROM books WHERE id=?",
+                [(identifier,) for identifier in identifiers],
+            )
+            db.executemany(
+                "DELETE FROM associations WHERE source=?",
+                [(identifier,) for identifier in identifiers],
+            )
+            roots = [row[0] for row in db.execute("SELECT path FROM collection_roots")]
+            db.executemany(
+                "DELETE FROM collection_roots WHERE path=?",
+                [(root,) for root in roots if within_folder(root, path)],
+            )
+            db.execute(
+                "INSERT OR IGNORE INTO collection_exclusions VALUES (?)", (path,)
+            )
+        return len(identifiers)
+
+    def delete_books(self, identifiers):
+        with self.connection() as db:
+            db.executemany(
+                "DELETE FROM books WHERE id=?",
+                [(identifier,) for identifier in identifiers],
+            )
+            db.executemany(
+                "DELETE FROM associations WHERE source=?",
+                [(identifier,) for identifier in identifiers],
+            )
 
     def add_job(self, kind, payload):
         identifier = uuid.uuid4().hex

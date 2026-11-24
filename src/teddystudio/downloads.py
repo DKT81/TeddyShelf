@@ -13,6 +13,27 @@ from .storage import Settings, atomic_json
 from . import media, taf
 
 
+def chapter_title(entry, index, count):
+    """Use names only when the catalog matches all actual TAF chapters."""
+    titles = entry.get("model", {}).get("tracks", [])
+    if (
+        isinstance(titles, list)
+        and len(titles) == count
+        and isinstance(titles[index], str)
+        and titles[index].strip()
+    ):
+        return titles[index].strip()
+    return f"Spur {index + 1:03}"
+
+
+def chapter_filename(title, number, extension):
+    try:
+        title = ascii_name(title[:110])
+    except ValueError:
+        title = f"Spur-{number:03}"
+    return f"{number:03}-{title}.{extension}"
+
+
 def output_folder(payload):
     entry = payload["download"]["entry"]
     root = Path(payload["download"]["destination"]).resolve()
@@ -229,7 +250,12 @@ def execute_download(payload, work, log):
                     ]
                 for n, (start, length) in enumerate(plan, 1):
                     log("Konvertieren", f"Lokale Audiodatei {n}/{len(plan)}")
-                    target = work / (f"Spur-{n:03}." + fmt)
+                    title = (
+                        chapter_title(entry, n - 1, len(plan))
+                        if options.get("split_chapters")
+                        else entry.get("title") or "Audio"
+                    )
+                    target = work / chapter_filename(title, n, fmt)
                     actual = media.export_segment(
                         pcm,
                         target,
@@ -242,6 +268,7 @@ def execute_download(payload, work, log):
                     )
                     if abs(actual - length) > max(0.2, length * 0.001):
                         raise ValueError("Exportdauer stimmt nicht")
+                    tag_export(target, title, entry, n)
                     audio.append((publish(target), actual))
         picture = unquote(entry.get("model", {}).get("pic", ""))
         cover = ""
@@ -270,13 +297,12 @@ def execute_download(payload, work, log):
     book.folder = str(folder)
     book.cover = cover
     book.cover_source = "Aus TeddyCloud" if cover else ""
-    titles = entry.get("model", {}).get("tracks", [])
     book.tracks = [
         Track(
             str(path),
             (
-                titles[n]
-                if len(titles) == len(audio)
+                chapter_title(entry, n, len(audio))
+                if options.get("split_chapters") and fmt in {"mp3", "flac", "wav"}
                 else book.title if len(audio) == 1 else f"Spur {n+1:03}"
             ),
             str(n + 1),
@@ -294,3 +320,24 @@ def execute_download(payload, work, log):
     if options.get("import_collection", True):
         result["book"] = book.to_dict()
     return result
+
+
+def tag_export(path, title, entry, number):
+    import mutagen
+
+    audio = mutagen.File(path, easy=True)
+    if audio is None:
+        raise ValueError("Audio-Metadaten konnten nicht geschrieben werden")
+    if audio.tags is None:
+        audio.add_tags()
+    if Path(path).suffix.lower() == ".wav":
+        from mutagen.id3 import TIT2, TALB, TRCK
+
+        audio.tags.add(TIT2(encoding=3, text=title))
+        audio.tags.add(TALB(encoding=3, text=entry.get("title") or title))
+        audio.tags.add(TRCK(encoding=3, text=str(number)))
+    else:
+        audio["title"] = [title]
+        audio["album"] = [entry.get("title") or title]
+        audio["tracknumber"] = [str(number)]
+    audio.save()

@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 import hashlib
 import json
+import os
 from concurrent.futures import ThreadPoolExecutor
 import re
 import shutil
@@ -20,6 +21,94 @@ from .media import probe
 PLAYLIST_WARNING = (
     "Playlist und Audiodateien passen nicht eindeutig zusammen. Reihenfolge prüfen."
 )
+
+
+def within_folder(folder, root):
+    if not folder or not root:
+        return False
+    folder = Path(os.path.abspath(folder)).as_posix().casefold().rstrip("/")
+    root = Path(os.path.abspath(root)).as_posix().casefold().rstrip("/")
+    return folder == root or folder.startswith(root + "/")
+
+
+def refresh_roots(selected, roots, excluded):
+    """Scan a selected parent for NEW children, retaining explicit re-inclusions."""
+    if not selected:
+        return roots
+    blocked = any(
+        within_folder(selected, item)
+        and not any(
+            within_folder(selected, root) and within_folder(root, item)
+            for root in roots
+        )
+        for item in excluded
+    )
+    targets = [] if blocked else [selected]
+    targets.extend(
+        root
+        for root in roots
+        if within_folder(root, selected)
+        and any(within_folder(root, item) for item in excluded)
+        and root not in targets
+    )
+    return targets
+
+
+def web_metadata(path):
+    """Read receipts from 0.7.0 as well as newer ones; never trust a stale hash."""
+    receipt = Path(str(path) + ".teddyshelf-web.json")
+    if receipt.stat().st_size > 1_000_000:
+        raise ValueError("Web-Downloadnachweis ist zu groß")
+    data = json.loads(receipt.read_text("utf-8"))
+    if (
+        not isinstance(data, dict)
+        or data.get("mode") != "audio"
+        or not isinstance(data.get("title"), str)
+        or not data["title"].strip()
+    ):
+        raise ValueError("Ungültige Web-Downloadmetadaten")
+    with Path(path).open("rb") as stream:
+        digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    if digest != data.get("sha256"):
+        raise ValueError("Web-Download wurde verändert; Metadatenzuordnung prüfen")
+    return data
+
+
+def web_book(path, metadata, info):
+    path = Path(path).resolve()
+    identifier = hashlib.sha256(
+        ("web-file:" + str(path).casefold()).encode()
+    ).hexdigest()[:24]
+    title = metadata["title"].strip()
+    tags = {key.lower(): str(value) for key, value in info.get("tags", {}).items()}
+    tags["title"] = title
+    album = title
+    track = Track(
+        str(path), title, str(metadata.get("index") or ""), info["duration"], tags
+    )
+    return Book(
+        identifier,
+        str(path.parent),
+        title,
+        series=metadata.get("series") or "",
+        album=album,
+        artist=metadata.get("artist") or tags.get("artist", ""),
+        origin="Web-Download",
+        tracks=[track],
+    )
+
+
+def organized_duplicate(metadata, source):
+    try:
+        target = Path(metadata["organized_copy"])
+        if not target.is_file() or target.resolve() == source.resolve():
+            return False
+        copy = web_metadata(target)
+        return copy.get("organized_from_hash", copy["sha256"]) == metadata[
+            "sha256"
+        ] and copy.get("organized_from") == str(source.resolve())
+    except (OSError, KeyError, TypeError, ValueError):
+        return False
 
 
 def resolve_legacy_order(book):
@@ -87,7 +176,7 @@ def playlist_order(playlist, paths):
     return None
 
 
-def scan(root, settings, cache, on_progress=lambda message: None):
+def scan(root, settings, cache, on_progress=lambda message: None, excluded=()):
     root = Path(root).resolve()
     if not root.is_dir():
         raise ValueError("Der Quellordner ist nicht erreichbar.")
@@ -95,14 +184,35 @@ def scan(root, settings, cache, on_progress=lambda message: None):
     if root == export or root in export.parents:
         raise ValueError("Der Exportordner darf nicht im Quellordner liegen.")
     folders = {}
-    for path in root.rglob("*"):
-        if path.is_file() and path.suffix.lower() in AUDIO_EXTENSIONS:
-            folders.setdefault(path.parent, []).append(path)
-        elif path.is_file() and (
-            path.name.lower()
-            in {"cover.jpg", "cover.png", "playlist.m3u", "playlist.m3u8"}
-        ):
-            folders.setdefault(path.parent, [])
+
+    def failed_walk(error):
+        # Never treat an unreadable subtree as a successful empty scan.
+        raise error
+
+    for directory, names, files in os.walk(
+        root, followlinks=False, onerror=failed_walk
+    ):
+        folder = Path(directory)
+        names[:] = [
+            name
+            for name in names
+            if name != ".teddyshelf-web"
+            and not any(within_folder(folder / name, item) for item in excluded)
+        ]
+        if any(within_folder(folder, item) for item in excluded):
+            names.clear()
+            continue
+        for name in files:
+            path = folder / name
+            if path.suffix.lower() in AUDIO_EXTENSIONS:
+                folders.setdefault(folder, []).append(path)
+            elif name.lower() in {
+                "cover.jpg",
+                "cover.png",
+                "playlist.m3u",
+                "playlist.m3u8",
+            }:
+                folders.setdefault(folder, [])
     result = []
     cache = Path(cache)
     cache.mkdir(parents=True, exist_ok=True)
@@ -115,14 +225,37 @@ def scan(root, settings, cache, on_progress=lambda message: None):
     def inspect(path):
         stat = path.stat()
         signature = [stat.st_size, stat.st_mtime_ns, settings.ffprobe]
+        receipt = Path(str(path) + ".teddyshelf-web.json")
+        if receipt.is_file():
+            receipt_stat = receipt.stat()
+            signature.extend([receipt_stat.st_size, receipt_stat.st_mtime_ns])
+            try:
+                copied = Path(json.loads(receipt.read_text("utf-8"))["organized_copy"])
+                for dependency in (copied, Path(str(copied) + ".teddyshelf-web.json")):
+                    signature.extend(
+                        [dependency.stat().st_size, dependency.stat().st_mtime_ns]
+                        if dependency.is_file()
+                        else [None]
+                    )
+            except (OSError, ValueError, KeyError, TypeError):
+                pass
         old = probe_cache.get(str(path), {})
         if old.get("signature") == signature:
             return str(path), old
         try:
-            return str(path), {
+            result = {
                 "signature": signature,
                 "info": probe(path, settings.ffprobe),
             }
+            if receipt.is_file():
+                try:
+                    result["web"] = web_metadata(path)
+                    result["organized_duplicate"] = organized_duplicate(
+                        result["web"], path
+                    )
+                except Exception as exc:
+                    result["web_error"] = str(exc)
+            return str(path), result
         except Exception as exc:
             return str(path), {"error": str(exc)}
 
@@ -134,9 +267,35 @@ def scan(root, settings, cache, on_progress=lambda message: None):
         inspected = dict(executor.map(inspect, all_paths))
     from .storage import atomic_json
 
-    atomic_json(index_file, {k: v for k, v in inspected.items() if "info" in v})
+    atomic_json(
+        index_file,
+        {**probe_cache, **{k: v for k, v in inspected.items() if "info" in v}},
+    )
     for folder, paths in sorted(folders.items(), key=lambda row: natural_key(row[0])):
         on_progress(str(folder))
+        ordinary = []
+        for path in sorted(paths, key=natural_key):
+            cached = inspected[str(path)]
+            if cached.get("organized_duplicate"):
+                continue
+            if "web" in cached:
+                result.append(web_book(path, cached["web"], cached["info"]))
+            elif Path(str(path) + ".teddyshelf-web.json").is_file():
+                # Keep an invalid/unreadable download visible as its own item.
+                title = cached.get("info", {}).get("tags", {}).get("title", path.stem)
+                book = web_book(
+                    path, {"title": title}, cached.get("info", {"duration": 0})
+                )
+                book.tracks[0].error = cached.get("web_error") or cached.get(
+                    "error", "Ungültige Web-Downloadmetadaten"
+                )
+                book.status = "Prüfen"
+                result.append(book)
+            else:
+                ordinary.append(path)
+        if paths and not ordinary:
+            continue
+        paths = ordinary
         tracks = []
         for path in sorted(paths, key=natural_key):
             try:
@@ -171,7 +330,7 @@ def scan(root, settings, cache, on_progress=lambda message: None):
         tags = tracks[0].tags if tracks else {}
         album = tags.get("album", folder.name)
         series = tags.get("series", "")
-        parent = folder.parent.name if folder.parent != root else ""
+        parent = folder.parent.name if folder != root and folder.parent != root else ""
         if not series:
             series = parent
         match = re.match(

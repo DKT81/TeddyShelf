@@ -4,6 +4,8 @@ Ab TeddyShelf 0.7.0 ergänzt **Web-Download** den vorhandenen Download aus Teddy
 
 ## Einrichtung
 
+In der eigenständigen Release-EXE ab 0.8.0 sind die Ausgangsversionen bereits enthalten. Für Quellinstallationen und ältere Pakete gilt:
+
 1. In **Web-Download** den Kanal **Stable** beibehalten und **yt-dlp-Update prüfen …** wählen. TeddyShelf zeigt das offizielle Release und bittet vor der Installation um Bestätigung.
 2. **Deno einrichten / aktualisieren …** wählen. Deno ist die JavaScript-Laufzeit für YouTube; die benötigten EJS-Skripte sind bereits Bestandteil der offiziellen `yt-dlp.exe`.
 3. Die aktiven Versionen werden in derselben Ansicht angezeigt. Python, YTDLnis und TonieToolbox sind nicht erforderlich. Das Windows-Paket enthält FFmpeg/FFprobe; die beiden neuen Werkzeuge werden bei der Einrichtung separat heruntergeladen.
@@ -42,3 +44,7 @@ Die Werkzeugdateien liegen unveränderlich nach Inhaltshash unter `<Datenordner>
 Webseiten ändern sich. yt-dlp-Engine-Fixes kommen über die unabhängigen Werkzeugupdates. Zugangsbeschränkte, entfernte, regionale oder anderweitig nicht verfügbare Quellen können je Eintrag fehlschlagen; diese Meldungen stehen im Auftragsprotokoll. TeddyShelf übernimmt keine Browser-Cookies, Konten, globale yt-dlp-Konfigurationen oder Plugins. URLs mit eingebetteten Zugangsdaten werden abgelehnt. Andere technische Meldungen von yt-dlp und FFmpeg erscheinen in deren Originalsprache. Vorschau und Download benötigen Netzwerkzugriff; lokale Test-URLs über HTTP werden ebenfalls unterstützt.
 
 Offizielle Referenzen: [yt-dlp](https://github.com/yt-dlp/yt-dlp), [EJS / JavaScript-Laufzeiten](https://github.com/yt-dlp/yt-dlp/wiki/EJS), [Nightly-Releases](https://github.com/yt-dlp/yt-dlp-nightly-builds/releases), [Deno-Releases](https://github.com/denoland/deno/releases).
+
+## Eigene Hörspielordner und Sammlung
+
+Ab 0.8.0 erhält jeder neue Download einen eigenen Hörspielordner. Alte flach gespeicherte Dateien können über **Fertiges Audio in Sammlung übernehmen** geprüft kopiert, mit Metadaten versehen und als einzelne Titel übernommen werden; ursprüngliche Audiodateien bleiben erhalten. Details, Ordneraktualisierung und Entfernen ausschließlich aus der Sammlung: [Sammlungsordner](COLLECTION-FOLDERS.md).

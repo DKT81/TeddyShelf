@@ -91,6 +91,18 @@ class LibraryPage(QWidget):
         super().__init__()
         self.store, self.settings = store, settings
         self.books = store.books()
+        if self.books and not self.store.collection_roots():
+            if settings.last_collection and any(
+                library.within_folder(book.folder, settings.last_collection)
+                for book in self.books
+            ):
+                self.store.register_collection_root(settings.last_collection)
+            for book in self.books:
+                if book.folder and not any(
+                    library.within_folder(book.folder, root)
+                    for root in self.store.collection_roots()
+                ):
+                    self.store.register_collection_root(book.folder)
         self.current = None
         self._expanded_folders = set()
         self.loading = False
@@ -150,6 +162,24 @@ class LibraryPage(QWidget):
             )
         )
         self.vertical_split = QSplitter(Qt.Orientation.Vertical)
+        layout.addWidget(
+            row(
+                button(
+                    tr_text("Ordner aktualisieren"),
+                    self.update_folder,
+                    tooltip=tr_text(
+                        "Gewählten Ordner mit Unterordnern neu abgleichen. Quelldateien werden nicht verändert."
+                    ),
+                ),
+                button(
+                    tr_text("Ordner aus Sammlung entfernen …"),
+                    self.remove_folder,
+                    tooltip=tr_text(
+                        "Nur Sammlungseinträge entfernen; Dateien und Downloadnachweise bleiben erhalten."
+                    ),
+                ),
+            )
+        )
         layout.addWidget(self.vertical_split, 1)
         split = QSplitter()
         self.vertical_split.addWidget(split)
@@ -523,9 +553,10 @@ class LibraryPage(QWidget):
             self.status,
             "setText",
             _f(
-                "{p0} sichtbare Hörspiele · {p1} insgesamt · {p2}",
+                "{p0} sichtbare Hörspiele · {p1} insgesamt · {p3} Audiodateien · {p2}",
                 p0=self.cards.count(),
                 p1=len(self.books),
+                p3=sum(len(book.tracks) for book in self.books),
                 p2=tr_text(self.remote_message),
             ),
         )
@@ -850,30 +881,213 @@ class LibraryPage(QWidget):
         if path:
             self.start_scan(path)
 
-    def start_scan(self, path):
+    def start_scan(self, path, explicit=True):
+        if getattr(self, "scanning", False):
+            return
+        self.scanning = True
+        excluded = (
+            []
+            if explicit
+            else [
+                root
+                for root in self.store.collection_exclusions()
+                if not library.within_folder(path, root)
+            ]
+        )
         _ui(self.status, "setText", tr_text("Sammlung wird eingelesen …"))
         task = background(
             self,
             lambda progress: library.scan(
-                path, self.settings, data_directory() / "covers", progress
+                path,
+                self.settings,
+                data_directory() / "covers",
+                progress,
+                excluded=excluded,
             ),
-            self.scanned,
+            lambda books: self.finish_scan(books, path, explicit),
         )
         task.signals.progress.connect(
             lambda message: _ui(self.status, "setText", tr_text(message))
         )
+        task.signals.failed.connect(lambda _: setattr(self, "scanning", False))
         self.settings.last_collection = path
         self.settings.save()
 
-    def scanned(self, books):
-        old = {b.id: b for b in self.books}
-        by_folder = {
-            str(Path(b.folder).resolve()).casefold(): b for b in self.books if b.folder
+    def finish_scan(self, books, path, explicit):
+        self.scanning = False
+        if explicit or (
+            not self.store.collection_roots() and not self.store.collection_exclusions()
+        ):
+            self.store.register_collection_root(path)
+        self.scanned(books, scope=[path])
+
+    def selected_folder(self):
+        item = self.tree.currentItem()
+        return (
+            item.data(0, Qt.ItemDataRole.UserRole)
+            if item and self.grouping.currentIndex() == 1
+            else None
+        )
+
+    def update_folder(self):
+        if getattr(self, "scanning", False):
+            return
+        selected = self.selected_folder()
+        roots = self.store.collection_roots()
+        targets = library.refresh_roots(
+            selected, roots, self.store.collection_exclusions()
+        )
+        if not targets:
+            self.choose_scan()
+            return
+        self.scanning = True
+        excluded = self.store.collection_exclusions()
+
+        def read(progress):
+            books = []
+            for path in targets:
+                exclusions = [
+                    root for root in excluded if not library.within_folder(path, root)
+                ]
+                books.extend(
+                    library.scan(
+                        path,
+                        self.settings,
+                        data_directory() / "covers",
+                        progress,
+                        excluded=exclusions,
+                    )
+                )
+            return books
+
+        def ready(books):
+            self.scanning = False
+            for path in targets:
+                self.store.remember_collection_root(path)
+            self.scanned(books, scope=targets)
+
+        task = background(self, read, ready)
+        task.signals.failed.connect(lambda _: setattr(self, "scanning", False))
+        task.signals.progress.connect(
+            lambda message: _ui(self.status, "setText", tr_text(message))
+        )
+
+    def remove_folder(self):
+        if getattr(self, "scanning", False):
+            return
+        path = self.selected_folder()
+        if not path:
+            path = _ui(
+                QFileDialog,
+                "getExistingDirectory",
+                self,
+                tr_text("Ordner aus Sammlung entfernen"),
+                self.settings.source,
+            )
+        if not path:
+            return
+        affected = [
+            book for book in self.books if library.within_folder(book.folder, path)
+        ]
+        if not affected:
+            return
+        if (
+            _ui(
+                QMessageBox,
+                "question",
+                self,
+                tr_text("Nur aus Sammlung entfernen"),
+                _f(
+                    "{p0}\n\n{p1} Hörspiele aus der Sammlung entfernen? Dateien bleiben erhalten. Der Ordner bleibt bei späteren Aktualisierungen ausgeschlossen, bis er ausdrücklich erneut eingelesen wird.",
+                    p0=path,
+                    p1=len(affected),
+                ),
+            )
+            != QMessageBox.StandardButton.Yes
+        ):
+            return
+        self.store.remove_collection_folder(path)
+        if library.within_folder(self.settings.last_collection, path):
+            self.settings.last_collection = ""
+            self.settings.save()
+        self.current = None
+        self.books = self.store.books()
+        self.refresh()
+        self.clear_details()
+        self.changed.emit()
+
+    def clear_details(self):
+        self.current = None
+        self.loading = True
+        for edit in self.edits.values():
+            edit.clear()
+        self.tracks.setRowCount(0)
+        _ui(self.preview, "setText", "")
+        _ui(self.preview, "setToolTip", "")
+        _ui(self.order_hint, "setText", "")
+        self.confirm_order_button.setEnabled(False)
+        self.loading = False
+
+    def import_web_books(self, books):
+        # Replace only the automatic aggregate created by older releases.
+        folders = {str(Path(book.folder).resolve()) for book in books}
+        imported_paths = {
+            str(Path(track.path).resolve()).casefold()
+            for book in books
+            for track in book.tracks
         }
+
+        def converted(track):
+            try:
+                copied = json.loads(
+                    Path(track.path + ".teddyshelf-web.json").read_text("utf-8")
+                ).get("organized_copy")
+                return (
+                    copied and str(Path(copied).absolute()).casefold() in imported_paths
+                )
+            except (OSError, ValueError, TypeError):
+                return False
+
+        obsolete = [
+            old.id
+            for old in self.books
+            if old.origin == "Ordner / Audiotags"
+            and (
+                any(
+                    library.within_folder(old.folder, folder)
+                    and library.within_folder(folder, old.folder)
+                    for folder in folders
+                )
+                or any(converted(track) for track in old.tracks)
+            )
+            and old.tracks
+            and all(
+                Path(track.path + ".teddyshelf-web.json").is_file()
+                for track in old.tracks
+            )
+        ]
+        self.store.delete_books(obsolete)
+        self.books = [book for book in self.books if book.id not in obsolete]
+        for folder in folders:
+            self.store.register_collection_root(folder)
+        self.scanned(books)
+
+    def scanned(self, books, scope=None):
+        old = {b.id: b for b in self.books}
+        by_sources = {
+            frozenset(str(Path(t.path).resolve()).casefold() for t in b.tracks): b
+            for b in self.books
+            if b.tracks
+        }
+        seen = set()
         for book in books:
-            match = by_folder.get(str(Path(book.folder).resolve()).casefold())
-            if match:
+            sources = frozenset(
+                str(Path(t.path).resolve()).casefold() for t in book.tracks
+            )
+            match = by_sources.get(sources) if sources else None
+            if match and book.id not in old:
                 book.id = match.id
+            seen.add(book.id)
             if book.id in old:
                 previous = old[book.id]
                 old_paths = [t.path for t in previous.tracks]
@@ -924,9 +1138,21 @@ class LibraryPage(QWidget):
                         True,
                     )
             old[book.id] = book
+        removed = [
+            identifier
+            for identifier, book in old.items()
+            if scope
+            and identifier not in seen
+            and any(library.within_folder(book.folder, root) for root in scope)
+        ]
+        for identifier in removed:
+            del old[identifier]
+        self.store.delete_books(removed)
         self.books = list(old.values())
         self.store.save_books(self.books)
         self.refresh()
+        if self.current and self.current.id not in old:
+            self.clear_details()
         self.changed.emit()
         self.sync_remote()
 

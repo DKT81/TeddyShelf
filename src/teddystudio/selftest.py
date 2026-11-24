@@ -210,6 +210,18 @@ def run(directory):
             assert [track.track for track in window.audio_page.sources] == ["1", "3"]
             assert window.audio_page.mode.currentIndex() == 2
             report["web_download"]["ordered_audio_handoff"] = True
+            window.web_page.handoff(True)
+            deadline = time.monotonic() + 15
+            while window.web_page._tasks and time.monotonic() < deadline:
+                app.processEvents()
+                time.sleep(0.02)
+            downloaded = [
+                book for book in store.books() if book.origin == "Web-Download"
+            ]
+            assert len(downloaded) == 2
+            assert len({book.folder for book in downloaded}) == 2
+            assert all(len(book.tracks) == 1 for book in downloaded)
+            report["web_download"]["collection_handoff"] = True
         window.close()
         app.processEvents()
         report.update(

@@ -1,5 +1,7 @@
 # Reproduzierbarer Windows-Build
 
+Der automatische Windows-x64-Ein-Datei-Build wird durch `scripts/build-windows.ps1` und `.github/workflows/windows-build.yml` ausgeführt. Er integriert die Laufzeitwerkzeuge, führt sämtliche Tests aus und prüft danach die tatsächliche EXE ohne System-Python oder FFmpeg. Details, manuelle Ausführung und Versions-Tags: [Windows Build & Release](WINDOWS-RELEASES.md). Der nachfolgende Ordner-Build bleibt für die Entwicklung verfügbar.
+
 Python 3.13 x64 installieren und eine virtuelle Umgebung erstellen:
 
 ```powershell

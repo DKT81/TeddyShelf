@@ -6,6 +6,13 @@ from teddystudio import media
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
+@pytest.fixture(autouse=True)
+def isolated_application_data(tmp_path, monkeypatch):
+    # Running the test suite must never read/write a real user's configuration.
+    monkeypatch.delenv("TEDDYSHELF_DATA", raising=False)
+    monkeypatch.setenv("TEDDYSTUDIO_DATA", str(tmp_path / "isolated-data"))
+
+
 @pytest.fixture
 def sample(tmp_path):
     path = tmp_path / "source.wav"

@@ -12,6 +12,8 @@ dist/
 tools/*.exe
 tools/*.dll
 artifacts/
+.venv-build-windows/
+tools/web-tools/
 settings.json
 *inventory*.json
 *.teddystudio.json

@@ -1,5 +1,9 @@
 # TeddyShelf
 
+**Windows-x64-Download:** [GitHub Releases](https://github.com/DKT81/TeddyShelf/releases). Die eigenständig lauffähige EXE enthält alle Laufzeitkomponenten. Manuelle Builds stehen unter [Actions → Windows Build & Release](https://github.com/DKT81/TeddyShelf/actions/workflows/windows-build.yml) als Artifact bereit. Neue `v*`-Versions-Tags bauen und veröffentlichen automatisch; Beta-Versionen erscheinen als Pre-Release. [Download-, Build- und Release-Anleitung](docs/WINDOWS-RELEASES.md).
+
+**Sammlung und Downloads:** Quellordner aktualisieren oder ausschließlich aus der Sammlung entfernen, fertige Web-Downloads in einzelne Hörspielordner übernehmen und bekannte TeddyCloud-Kapitel mit ihren Tracktiteln speichern. [Bedienung und Migration älterer Downloads](docs/COLLECTION-FOLDERS.md).
+
 **TeddyShelf hieß bisher TeddyStudio.** Da TeddyCloud bereits eine Funktion mit dem Namen **TeddyStudio** enthält, wurde dieses eigenständige Programm in **TeddyShelf** umbenannt, um Verwechslungen zu vermeiden. Die Umbenennung ändert weder die Verbindung zu TeddyCloud noch vorhandene Einstellungen oder Sammlungsdaten.
 
 Eigenständige Windows-Anwendung für Hörspielsammlungen, Metadaten, Cover, Audioschnitt und geprüfte TeddyCloud-Importe. Oberfläche nach Coverbibliothek B: Serien-/Ordnerauswahl, Coverkarten und Detailbereich unter der Sammlung.

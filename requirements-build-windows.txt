@@ -1,0 +1,7 @@
+# Validated Windows build environment; application dependencies remain in pyproject.toml.
+PyInstaller==6.22.3
+PySide6-Addons==6.12.0
+mutagen==1.48.1
+Pillow==13.0.0
+requests==2.34.2
+pytest==9.2.0
