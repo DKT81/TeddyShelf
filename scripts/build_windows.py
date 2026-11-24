@@ -93,7 +93,12 @@ def main():
     import PySide6
     import shiboken6
 
-    qt_translation = Path(PySide6.__file__).parent / "translations" / "qtbase_de.qm"
+    from PySide6.QtCore import QLibraryInfo
+
+    qt_translation = (
+        Path(QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath))
+        / "qtbase_de.qm"
+    )
     if not qt_translation.is_file():
         raise SystemExit("Missing Qt German translation catalog")
     command[3:3] = ["--add-data", f"{qt_translation};PySide6/translations"]

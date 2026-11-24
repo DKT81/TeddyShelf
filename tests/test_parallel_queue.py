@@ -167,10 +167,15 @@ def test_process_guard_stops_native_descendant(tmp_path):
             assert kernel.WaitForSingleObject(handle, 5000) == 0
             kernel.CloseHandle(handle)
         else:
-            wait_until(
-                lambda: not Path(f"/proc/{pid}").exists()
-                or Path(f"/proc/{pid}/stat").read_text().split()[2] == "Z"
-            )
+
+            def descendant_stopped():
+                try:
+                    return Path(f"/proc/{pid}/stat").read_text().split()[2] == "Z"
+                except (FileNotFoundError, ProcessLookupError):
+                    # The process may exit between opening and reading /proc.
+                    return True
+
+            wait_until(descendant_stopped)
     finally:
         terminate_tree(parent, guard)
 

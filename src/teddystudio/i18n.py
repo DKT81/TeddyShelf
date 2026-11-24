@@ -13,7 +13,7 @@ import string
 import sys
 import weakref
 
-from PySide6.QtCore import QCoreApplication, QLocale, QTranslator
+from PySide6.QtCore import QCoreApplication, QLibraryInfo, QLocale, QTranslator
 
 LOG = logging.getLogger(__name__)
 FORMATTER = string.Formatter()
@@ -249,9 +249,15 @@ class TranslationManager:
             import PySide6
 
             self.qt_base = QTranslator()
-            path = Path(PySide6.__file__).parent / "translations"
-            if self.qt_base.load("qtbase_" + self.language, str(path)):
-                app.installTranslator(self.qt_base)
+            # Qt's wheel layout differs between Windows and Linux. Frozen
+            # Windows builds also carry an explicit bundled catalog fallback.
+            for path in (
+                QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath),
+                str(Path(PySide6.__file__).parent / "translations"),
+            ):
+                if self.qt_base.load("qtbase_" + self.language, path):
+                    app.installTranslator(self.qt_base)
+                    break
             self.qt_translator = JsonQtTranslator()
             if self.catalogs[self.language].get("qt"):
                 app.installTranslator(self.qt_translator)
