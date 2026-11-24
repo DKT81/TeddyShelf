@@ -47,6 +47,9 @@ def atomic_json(path: Path, value):
 
 @dataclass
 class Settings:
+    web_destination: str = field(
+        default_factory=lambda: str(Path.home() / "Music" / "TeddyShelf-Web")
+    )
     parallel_jobs: int = 1
     cloud_overlay: str = ""
     download_destination: str = field(

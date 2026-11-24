@@ -26,11 +26,14 @@ def run_child(request_path):
     tempfile.tempdir = str(native_temp)
     from .jobs import execute
 
-    def log(stage, message):
+    def log(stage, message, progress=None):
         with (request_path.parent / "events.jsonl").open(
             "a", encoding="utf-8"
         ) as stream:
-            stream.write(json.dumps([stage, str(message)], ensure_ascii=False) + "\n")
+            event = [stage, str(message)]
+            if progress is not None:
+                event.append(progress)
+            stream.write(json.dumps(event, ensure_ascii=False) + "\n")
 
     try:
         result = execute(request["kind"], request["payload"], request["work"], log)
@@ -233,18 +236,27 @@ class Worker:
             raw = stream.read()
         end = raw.rfind(b"\n") + 1
         for line in raw[:end].splitlines():
-            stage, message = json.loads(line.decode("utf-8"))
+            stage, message, *reported = json.loads(line.decode("utf-8"))
+            if item["request"]["kind"] == "Web-Download":
+                item["progress"] = max(
+                    item.get("progress", 0), float(reported[0]) if reported else 0
+                )
+                reported = [item["progress"]]
             self.store.event(identifier, stage, message)
             self.store.update_job(
                 identifier,
                 "Aktiv",
-                {
-                    "Prüfen": 0.05,
-                    "Konvertieren": 0.25,
-                    "Aufteilen": 0.4,
-                    "Hochladen": 0.7,
-                    "Modell speichern": 0.9,
-                }.get(stage, 0.1),
+                (
+                    max(0, min(0.99, float(reported[0])))
+                    if reported
+                    else {
+                        "Prüfen": 0.05,
+                        "Konvertieren": 0.25,
+                        "Aufteilen": 0.4,
+                        "Hochladen": 0.7,
+                        "Modell speichern": 0.9,
+                    }.get(stage, 0.1)
+                ),
                 stage + ": " + message,
             )
         item["offset"] += end
@@ -419,6 +431,10 @@ class Worker:
         import math
 
         payload = json.loads(row["payload"])
+        if "web" in payload:
+            from .web_downloads import output_path
+
+            return {str(output_path(payload["web"])).casefold()}
         if "download" in payload:
             from .downloads import output_folder
 

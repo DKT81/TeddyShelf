@@ -13,16 +13,9 @@ Auf Wunsch vom 17.11.2026 für später vorgemerkt, ausdrücklich noch nicht umse
 
 Fachlich entspricht das einem eigenen Hörspielordner mit einer geordneten Audiozusammenstellung. Technisch kann ein Projekt auf vorhandene Dateien verweisen; Kopien in einen neuen Ordner sind dafür nicht zwingend nötig. Keine RFID-Zuordnung vorsehen.
 
-## YouTube als Audioquelle für Tonies
+## Web-/YouTube-Download als Audio- und Videoquelle
 
-Am 17.11.2026 für später vorgemerkt, noch nicht implementieren.
-
-- YouTube-Adresse als optionale Quelle hinzufügen und verfügbare Metadaten anzeigen.
-- Einzelvideos und Playlists als getrennte Quelltypen berücksichtigen; damit ist auch die zwischenzeitlich im Repository ergänzte Frage nach Dateien/Playlists vorgemerkt.
-- Audio herunterladen und als neues Projekt oder Track übernehmen, gegebenenfalls Kapitel und Cover auswählen.
-- Über die vorhandene Konvertierung und verifizierte Warteschlange einen Tonie erzeugen.
-- Fortschritt, Abbruch, Wiederaufnahme und verständliche Fehler berücksichtigen.
-- Download-Werkzeug und Aktualisierung später festlegen; verfügbare Inhalte und Nutzungsberechtigung berücksichtigen. Keine Umgehung von Zugangsbeschränkungen vorsehen.
+In Version 0.7.0 umgesetzt: Vorschau für Einzelvideos und Playlists, geordnete Einzelauswahl, eigene Download-Aufträge, Audio-/Videoausgabe, Wiederholung einzelner Fehler und Übergabe an den vorhandenen Audio-/TAF-Import. Offizielle yt-dlp-/Deno-Werkzeuge werden unabhängig verwaltet, geprüft und mit Rückkehrmöglichkeit aktualisiert. [Einrichtung und Grenzen](WEB-DOWNLOADS.md).
 
 ## TeddyCloud-Inhalte lokal sichern / zurückholen
 

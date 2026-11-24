@@ -89,6 +89,10 @@ def execute(kind, payload, work, log):
 
 
 def _execute(kind, payload, work, log):
+    if kind == "Web-Download":
+        from .web_downloads import execute_web
+
+        return execute_web(payload, work, log)
     if kind == "Aus TeddyCloud holen":
         from .downloads import execute_download
 

@@ -6,6 +6,10 @@ Eigenständige Windows-Anwendung für Hörspielsammlungen, Metadaten, Cover, Aud
 
 ## Einblicke in die Anwendung
 
+**Web-Downloads ab 0.7.0:** Einzelvideos und Playlists mit lokalem yt-dlp als Audio oder Video herunterladen, Einträge auswählen und fertige Audiodateien geordnet an die Audio-/TAF-Verarbeitung übergeben. Status, Pause, Abbruch und gezielte Wiederholung nutzen die vorhandene Warteschlange. Stable-/Nightly-Updates mit Prüfung und Rückkehr zur vorherigen Version sind unabhängig von TeddyShelf. [Einrichtung und Bedienung](docs/WEB-DOWNLOADS.md).
+
+![Web-Download mit erfundener Playlist und simulierten Statuswerten](docs/images/web-download.png)
+
 Die Screenshots zeigen die echte Oberfläche mit ausschließlich erfundenen Beispieldaten und selbst erstellten Demo-Covern. Titel, Serverbestand, Wellenform und Auftragszustände sind zur Veranschaulichung simuliert; es werden keine privaten Sammlungsdaten gezeigt.
 
 **Sammlung:** Serien und Ordner durchsuchen, Cloud-/Lokal-/Prüfen-Markierungen erkennen und Custom-Tonie-Metadaten bearbeiten.

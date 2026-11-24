@@ -250,6 +250,49 @@ def main():
     table.setCurrentCell(3, 0)
     table.selectRow(3)
     capture(4, "auftraege.png")
+    from teddystudio import web_downloads
+
+    web = window.web_page
+    web.snapshot = {
+        "id": "demo-web-playlist",
+        "title": "Demo: Entdeckungsreise",
+        "entries": [
+            {
+                "index": n,
+                "id": str(n),
+                "title": title,
+                "url": f"https://media.example/chapter-{n}",
+                "duration": 240 + n * 25,
+                "error": "",
+            }
+            for n, title in enumerate(
+                ["Der Aufbruch", "Unterwegs", "Ein neuer Fund", "Am Ziel"], 1
+            )
+        ],
+    }
+    web.url.setText("https://media.example/demo-playlist")
+    web.destination.setText("D:/TeddyShelf/Web")
+    web.render_entries()
+    options = web_downloads.make_payloads(
+        web.snapshot,
+        web.snapshot["entries"],
+        "D:/TeddyShelf/Web",
+        "audio",
+        {},
+        settings,
+    )
+    for payload, state, progress in zip(
+        options,
+        ["Lokal gespeichert", "Aktiv", "Wartet", "Fehlgeschlagen"],
+        [1, 0.62, 0, 0],
+    ):
+        identifier = store.add_job(web_downloads.JOB_KIND, payload)
+        store.update_job(
+            identifier, state, progress, "Demo: simulierter Downloadstatus"
+        )
+    web.reload_batches(web.snapshot["id"])
+    web.refresh_status()
+    capture(8, "web-download.png")
     window.close()
     app.processEvents()
     temporary.cleanup()

@@ -41,7 +41,12 @@ def template(node):
 def messages():
     result = set()
     for path in (ROOT / "src" / "teddystudio").glob("*.py"):
-        if path.name in {"i18n.py", "i18n_widgets.py", "selftest.py"}:
+        if path.name in {
+            "i18n.py",
+            "i18n_widgets.py",
+            "selftest.py",
+            "web_selftest.py",
+        }:
             continue
         tree = ast.parse(path.read_text(encoding="utf-8"))
         if path.stem.startswith("ui_") or path.name == "app.py":

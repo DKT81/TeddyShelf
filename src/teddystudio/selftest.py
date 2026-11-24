@@ -130,6 +130,11 @@ def run(directory):
             if worker.running:
                 worker.cancel_all()
                 worker.thread.join(20)
+        web_tools = os.environ.get("TEDDYSHELF_WEB_TEST_TOOLS")
+        if web_tools:
+            from .web_selftest import run as web_acceptance
+
+            report["web_download"] = web_acceptance(root, store, settings, web_tools)
         window = MainWindow(settings, store)
         from . import __version__
 
@@ -195,6 +200,16 @@ def run(directory):
         dialog.setStandardButtons(QMessageBox.StandardButton.Cancel)
         assert "Abbrechen" in dialog.button(QMessageBox.StandardButton.Cancel).text()
         report["languages"] = ["de", "en"]
+        if web_tools:
+            window.web_page.reload_batches(report["web_download"]["batch"])
+            window.web_page.handoff()
+            deadline = time.monotonic() + 15
+            while window.web_page._tasks and time.monotonic() < deadline:
+                app.processEvents()
+                time.sleep(0.02)
+            assert [track.track for track in window.audio_page.sources] == ["1", "3"]
+            assert window.audio_page.mode.currentIndex() == 2
+            report["web_download"]["ordered_audio_handoff"] = True
         window.close()
         app.processEvents()
         report.update(

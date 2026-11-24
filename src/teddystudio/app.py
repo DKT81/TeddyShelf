@@ -106,6 +106,7 @@ class MainWindow(QMainWindow):
                 tr_text("Einstellungen"),
                 tr_text("TeddyCloud-Bestand"),
                 tr_text("Tonies / Tags"),
+                tr_text("Web-Download"),
             ],
         )
         self.navigation.setFixedWidth(205)
@@ -133,6 +134,15 @@ class MainWindow(QMainWindow):
         self.cloud_page = CloudPage(self.store, self.settings, self.jobs_added)
         self.tags_page = TagsPage(
             self.store, self.settings, self.cloud_page, self.jobs_added
+        )
+        from .ui_web import WebPage
+
+        self.web_page = WebPage(
+            self.store,
+            self.settings,
+            self.worker,
+            self.jobs_added,
+            self.web_audio_handoff,
         )
 
         def offer_tag(entry):
@@ -189,6 +199,7 @@ class MainWindow(QMainWindow):
             self.settings_page,
             self.cloud_page,
             self.tags_page,
+            self.web_page,
         ]:
             self.stack.addWidget(page)
         self.navigation.currentRowChanged.connect(self.stack.setCurrentIndex)
@@ -473,6 +484,18 @@ class MainWindow(QMainWindow):
         self.navigation.setCurrentRow(4)
         self.worker.start()
 
+    def web_audio_handoff(self, title, tracks):
+        """Replace the input playlist explicitly, in the original web order."""
+        self.audio_page.stop()
+        self.audio_page.sources = tracks
+        self.audio_page.book = Book(
+            "web-audio", str(Path(tracks[0].path).parent), title, tracks=tracks
+        )
+        _ui(self.audio_page.title, "setText", title)
+        self.audio_page.mode.setCurrentIndex(2)
+        self.audio_page.refresh_sources()
+        self.navigation.setCurrentRow(2)
+
     def jobs_changed(self):
         self.jobs_page.refresh()
         known = {b.id for b in self.collection.books}
@@ -514,6 +537,7 @@ class MainWindow(QMainWindow):
                 self.cloud_page,
                 self.tags_page,
                 self.settings_page,
+                self.web_page,
                 self,
             ]
         )
@@ -566,6 +590,7 @@ class MainWindow(QMainWindow):
                 return
             self._closing_when_idle = True
             self.centralWidget().setEnabled(False)
+            self.web_page.cancel_background()
             self.worker.cancel_all()
         if self._closing_when_idle and (self.worker.running or self._background_busy()):
             _ui(

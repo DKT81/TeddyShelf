@@ -15,3 +15,12 @@ Dieses Repository enthält den Projektquellcode und lizenzierte Projektressource
 - Noto Sans: SIL Open Font License, enthalten als assets/FONT-LICENSE.txt, https://github.com/notofonts/noto-fonts
 
 Die Laufzeitdistribution enthält weitere transitive Abhängigkeiten und deren jeweilige Metadaten/Lizenzen. Eigener Code ist GPLv3 oder neuer. Keine TonieToolbox-Bibliothek ist Bestandteil der Anwendung. Keine Originalcover oder Hörspiele werden verteilt.
+
+## Optionale Web-Werkzeuge
+
+Ab 0.7.0 lädt die Web-Ansicht auf ausdrückliche Einrichtung separate offizielle Windows-Werkzeuge herunter. Diese Dateien sind weder Teil des Quellrepositories noch des TeddyShelf-ZIP-Pakets und werden unabhängig aktualisiert:
+
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp): Quellcode unter Unlicense; die offiziellen PyInstaller-Windows-Binaries einschließlich ihrer Abhängigkeiten werden als GPLv3+-Gesamtwerk verteilt. Sie enthalten die passenden EJS-Skripte. [Upstream-Lizenzen](https://github.com/yt-dlp/yt-dlp/blob/master/THIRD_PARTY_LICENSES.txt).
+- [Deno](https://github.com/denoland/deno): MIT-Lizenz mit separat aufgeführten Abhängigkeiten; verwendet wird das offizielle Windows-x64-Release. [Lizenz](https://github.com/denoland/deno/blob/main/LICENSE.md), [Drittanbieter](https://github.com/denoland/deno/blob/main/third_party/README.md).
+
+Die Werkzeugverwaltung protokolliert Repository, Release und Inhaltshash in ihrem lokalen Zustand. Details zur Prüfung und zur unabhängigen Installation stehen unter [Web-Downloads](docs/WEB-DOWNLOADS.md).
