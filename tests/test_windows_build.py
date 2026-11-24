@@ -3,12 +3,63 @@
 from pathlib import Path
 import json
 import hashlib
+import shutil
+import subprocess
+import sys
 
 import pytest
 
 from teddystudio.web_tools import ToolManager
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_powershell_forwards_python_switches_without_binding_common_parameters(
+    tmp_path,
+):
+    shell = shutil.which("pwsh") or shutil.which("powershell")
+    if not shell:
+        pytest.skip("PowerShell is required for the Windows build wrapper")
+    source = (ROOT / "scripts/build-windows.ps1").read_text("utf-8")
+    function = source.split("    function Invoke-BuildPython {", 1)[1].split(
+        "    $script:buildPython = $PythonExe", 1
+    )[0]
+    recorder = tmp_path / "record arguments.py"
+    recorder.write_text(
+        "import sys,json; print(json.dumps(sys.argv[1:]))", encoding="utf-8"
+    )
+
+    def literal(value):
+        return "'" + str(value).replace("'", "''") + "'"
+
+    script = tmp_path / "check.ps1"
+    script.write_text(
+        "$ErrorActionPreference = 'Stop'\n"
+        + "function Invoke-BuildPython {"
+        + function
+        + "$script:buildPython = "
+        + literal(sys.executable)
+        + "\n"
+        + "Invoke-BuildPython -Arguments @("
+        + literal(recorder)
+        + ", '-m', 'pip', 'install', '--no-deps', '-e', '.', 'path with spaces')\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [shell, "-NoProfile", "-NonInteractive", "-File", str(script)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert json.loads(result.stdout.strip()) == [
+        "-m",
+        "pip",
+        "install",
+        "--no-deps",
+        "-e",
+        ".",
+        "path with spaces",
+    ]
 
 
 def test_bundled_tools_bootstrap_preserves_independent_updates(tmp_path):

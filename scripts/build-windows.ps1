@@ -12,30 +12,32 @@ $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Push-Location $projectRoot
 try {
     function Invoke-BuildPython {
-        param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)
+        # Pass Python switches as array values so PowerShell never binds them as
+        # common parameters (for example pip -e versus -ErrorAction).
+        param([string[]]$Arguments)
         & $script:buildPython @Arguments
         if ($LASTEXITCODE -ne 0) { throw "Python step failed ($LASTEXITCODE): $($Arguments -join ' ')" }
     }
 
     $script:buildPython = $PythonExe
-    Invoke-BuildPython -c "import sys,struct; assert sys.platform=='win32' and struct.calcsize('P')==8, 'Windows-x64 Python required'"
+    Invoke-BuildPython -Arguments @("-c", "import sys,struct; assert sys.platform=='win32' and struct.calcsize('P')==8, 'Windows-x64 Python required'")
     if (-not $UseExistingEnvironment) {
         $environmentPath = Join-Path $projectRoot ".venv-build-windows"
-        Invoke-BuildPython -m venv $environmentPath
+        Invoke-BuildPython -Arguments @("-m", "venv", $environmentPath)
         $script:buildPython = Join-Path $environmentPath "Scripts/python.exe"
-        Invoke-BuildPython -m pip install --upgrade pip
-        Invoke-BuildPython -m pip install -r requirements-build-windows.txt
-        Invoke-BuildPython -m pip install --no-deps -e .
+        Invoke-BuildPython -Arguments @("-m", "pip", "install", "--upgrade", "pip")
+        Invoke-BuildPython -Arguments @("-m", "pip", "install", "-r", "requirements-build-windows.txt")
+        Invoke-BuildPython -Arguments @("-m", "pip", "install", "--no-deps", "-e", ".")
     }
 
     $artifactRoot = Join-Path $projectRoot "artifacts/windows-build"
     New-Item -ItemType Directory -Force -Path $artifactRoot | Out-Null
     $env:TEDDYSHELF_DATA = Join-Path $artifactRoot "test-data"
     $env:QT_QPA_PLATFORM = "offscreen"
-    Invoke-BuildPython scripts/prepare_windows_tools.py
-    Invoke-BuildPython scripts/extract_translations.py --check
-    Invoke-BuildPython -m pytest -q "--junitxml=$artifactRoot/test-results.xml"
-    Invoke-BuildPython scripts/build_windows.py --onefile --output-dir $OutputDirectory
+    Invoke-BuildPython -Arguments @("scripts/prepare_windows_tools.py")
+    Invoke-BuildPython -Arguments @("scripts/extract_translations.py", "--check")
+    Invoke-BuildPython -Arguments @("-m", "pytest", "-q", "--junitxml=$artifactRoot/test-results.xml")
+    Invoke-BuildPython -Arguments @("scripts/build_windows.py", "--onefile", "--output-dir", $OutputDirectory)
 
     $outputPath = if ([System.IO.Path]::IsPathRooted($OutputDirectory)) {
         [System.IO.Path]::GetFullPath($OutputDirectory)
@@ -46,7 +48,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Cannot determine application version" }
     $exeName = "TeddyShelf-$version-Windows-x64.exe"
     $executable = Join-Path $outputPath $exeName
-    Invoke-BuildPython scripts/verify_windows_exe.py $executable --output (Join-Path $artifactRoot "standalone-check")
+    Invoke-BuildPython -Arguments @("scripts/verify_windows_exe.py", $executable, "--output", (Join-Path $artifactRoot "standalone-check"))
     Copy-Item -LiteralPath "artifacts/build-provenance.json" -Destination (Join-Path $outputPath "build-provenance.json")
     Compress-Archive -Path "artifacts/licenses/*" -DestinationPath (Join-Path $outputPath "TeddyShelf-$version-Licenses.zip") -Force
     if ($env:GITHUB_OUTPUT) {
